@@ -63,6 +63,19 @@ describe("typed quantity wire consumer", () => {
     expect(response.result.value).not.toHaveProperty("numeric_value");
   });
 
+  it("preserves a native refusal without a fallback evaluator", () => {
+    const request: QuantityRequest = {
+      schema: "plurimath.evaluate.quantity/1",
+      ast: { type: "variable", name: "unbound" },
+      bindings: {},
+    };
+    const response = evaluateQuantityRequest(kernel, request);
+    expect(response).toEqual(JSON.parse(kernel.evaluateRequest(JSON.stringify(request))));
+    expect(response.ok).toBe(false);
+    if (response.ok) throw new Error("unbound quantity unexpectedly succeeded");
+    expect(response.error.code).toBeTypeOf("string");
+  });
+
   it("preserves all 36 source numeric values, accuracy and unit identities", () => {
     for (const row of source.cases) {
       const request = JSON.parse(row.request_json) as QuantityRequest;
@@ -99,6 +112,22 @@ describe("typed quantity wire consumer", () => {
       expect(response.result.converted, row.id).toBeNull();
     }
   }, 60_000);
+  it("returns the exact final-source response for all 38 typed and converted cases", () => {
+    expect(hash(load("final-source-38.json"))).toBe(provenance.final_source_38_sha256);
+    const strict = JSON.parse(load("final-source-38.json").toString("utf8")) as {
+      cases: { id: string; request_json: string; expected: unknown }[];
+    };
+    expect(strict.cases).toHaveLength(38);
+    expect(new Set(strict.cases.map((row) => row.id)).size).toBe(38);
+    for (const row of strict.cases) {
+      const request = JSON.parse(row.request_json) as QuantityRequest;
+      expect(evaluateQuantityRequest(kernel, request), row.id).toStrictEqual(row.expected);
+      expect(JSON.parse(kernel.evaluateRequest(row.request_json)), row.id).toStrictEqual(
+        row.expected,
+      );
+    }
+  }, 60_000);
+
   it("preserves the two source-converted numeric classes, signed zero and units", () => {
     const converted = JSON.parse(load("converted.json").toString("utf8")) as {
       cases: { id: string; request_json: string; expected: Record<string, unknown> }[];

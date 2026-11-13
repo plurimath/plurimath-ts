@@ -1,4 +1,4 @@
-/* @ts-self-types="./plurimath_numeric.d.ts" */
+/* @ts-self-types="./numeric.d.ts" */
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,
@@ -19,7 +19,7 @@ function __wbg_get_imports() {
     };
     return {
         __proto__: null,
-        "./plurimath_numeric_bg.js": import0,
+        "./numeric_bg.js": import0,
     };
 }
 
@@ -160,7 +160,7 @@ async function __wbg_init_once(module_or_path) {
     }
 
     if (module_or_path === undefined) {
-        module_or_path = new URL('plurimath_numeric_bg.wasm', import.meta.url);
+        module_or_path = new URL('numeric_bg.wasm', import.meta.url);
     }
     const imports = __wbg_get_imports();
 

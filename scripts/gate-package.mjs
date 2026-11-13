@@ -241,9 +241,8 @@ const optionalReaderOutside = (format) =>
 // The WASM facade is transport only: no format, parser, XML, locale table or
 // TypeScript evaluator module may ship in it (no independent evaluator).
 // The only other module is the kernel's verbatim wasm-bindgen glue.
-const WASM_GLUE = /(?:^|\/)evaluation\/quantity-wasm\/plurimath_numeric\.js$/;
-const WASM_FACADE_ONLY =
-  /^(?!(?:src\/)?evaluation\/(?:wasm\.ts|quantity-wasm\/plurimath_numeric\.js)$)/;
+const WASM_GLUE = /(?:^|\/)evaluation\/quantity-wasm\/numeric\.js$/;
+const WASM_FACADE_ONLY = /^(?!(?:src\/)?evaluation\/(?:wasm\.ts|quantity-wasm\/numeric\.js)$)/;
 
 const FORBIDDEN = {
   // The root is intentionally full-sized; only subpath imports are slim.

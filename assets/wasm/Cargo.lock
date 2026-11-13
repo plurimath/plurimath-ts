@@ -33,6 +33,7 @@ checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 [[package]]
 name = "asciiunits"
 version = "0.1.0"
+source = "git+https://github.com/unitsml/asciiunits-rs?rev=1f771caef878b9d383a5f29b02f434b8b614b780#1f771caef878b9d383a5f29b02f434b8b614b780"
 dependencies = [
  "parsanol",
  "serde",
@@ -69,9 +70,9 @@ checksum = "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
 
 [[package]]
 name = "const-oid"
-version = "0.10.2"
+version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6ef517f0926dd24a1582492c791b6a4818a4d94e789a334894aa15b0d12f55c"
+checksum = "be95d4a884358a21a199689323c29e9256b4a1b315e22f183d155422041d3a9a"
 
 [[package]]
 name = "cpufeatures"
@@ -173,9 +174,9 @@ dependencies = [
 
 [[package]]
 name = "itoa"
-version = "1.0.18"
+version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+checksum = "3bd1574e617a9a6c1f8f8181bd7e841e1f20e4277607ef28945765188d6284d4"
 
 [[package]]
 name = "js-sys"
@@ -185,6 +186,15 @@ checksum = "8dc09d2154098bbf4ef54eab6b117a3c24cbbffe94046b16ee6d6d4510584d3a"
 dependencies = [
  "cfg-if",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "latexmath"
+version = "0.1.0"
+source = "git+https://github.com/plurimath/latexmath-rs?rev=0f6ad8c243f3fc5a0ce1addf3116e6b8d544dd1e#0f6ad8c243f3fc5a0ce1addf3116e6b8d544dd1e"
+dependencies = [
+ "parsanol",
+ "serde_json",
 ]
 
 [[package]]
@@ -200,10 +210,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 
 [[package]]
+name = "lutaml-rs"
+version = "0.1.0"
+source = "git+https://github.com/lutaml/lutaml-rs?rev=945e6ada11f52f77b959a5df1f05fdbd23092939#945e6ada11f52f77b959a5df1f05fdbd23092939"
+dependencies = [
+ "num-bigint",
+ "num-rational",
+ "num-traits",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
+
+[[package]]
+name = "moxml"
+version = "0.1.0"
+source = "git+https://github.com/lutaml/moxml-rs?rev=e49cdfc97df78bc681c804947e122399f09c50ae#e49cdfc97df78bc681c804947e122399f09c50ae"
+dependencies = [
+ "regex",
+ "wasm-bindgen",
+]
 
 [[package]]
 name = "num-bigint"
@@ -213,6 +244,7 @@ checksum = "a5e44f723f1133c9deac646763579fdb3ac745e418f2a7af9cd0c431da1f20b9"
 dependencies = [
  "num-integer",
  "num-traits",
+ "serde",
 ]
 
 [[package]]
@@ -233,6 +265,7 @@ dependencies = [
  "num-bigint",
  "num-integer",
  "num-traits",
+ "serde",
 ]
 
 [[package]]
@@ -252,8 +285,8 @@ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
 name = "parsanol"
-version = "0.20.12"
-source = "git+https://github.com/parsanol/parsanol-rs?rev=20d5e6cebcade3cf2111a00a7ef3f5b69d673481#20d5e6cebcade3cf2111a00a7ef3f5b69d673481"
+version = "0.20.14"
+source = "git+https://github.com/parsanol/parsanol-rs?rev=5206a33b5417b4ecd3a601930461ed2967c871e7#5206a33b5417b4ecd3a601930461ed2967c871e7"
 dependencies = [
  "ahash",
  "getrandom 0.3.4",
@@ -270,12 +303,49 @@ dependencies = [
 
 [[package]]
 name = "parsanol-derive"
-version = "0.20.12"
-source = "git+https://github.com/parsanol/parsanol-rs?rev=20d5e6cebcade3cf2111a00a7ef3f5b69d673481#20d5e6cebcade3cf2111a00a7ef3f5b69d673481"
+version = "0.20.14"
+source = "git+https://github.com/parsanol/parsanol-rs?rev=5206a33b5417b4ecd3a601930461ed2967c871e7#5206a33b5417b4ecd3a601930461ed2967c871e7"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 3.0.10",
+]
+
+[[package]]
+name = "plurimath-amath"
+version = "0.1.0"
+source = "git+https://github.com/plurimath/amath-rs?rev=7a26965528cda91030d164ec27f10b6c89e14f6b#7a26965528cda91030d164ec27f10b6c89e14f6b"
+dependencies = [
+ "lutaml-rs",
+ "parsanol",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
+name = "plurimath-facade"
+version = "0.1.0"
+dependencies = [
+ "asciiunits",
+ "latexmath",
+ "moxml",
+ "parsanol",
+ "plurimath-amath",
+ "plurimath-json",
+ "plurimath-umath",
+ "regex",
+ "serde",
+ "serde_json",
+ "unitsdb-rs",
+]
+
+[[package]]
+name = "plurimath-json"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -288,8 +358,18 @@ dependencies = [
  "num-integer",
  "num-rational",
  "num-traits",
+ "plurimath-json",
  "serde_json",
  "unitsml-rs",
+]
+
+[[package]]
+name = "plurimath-umath"
+version = "0.1.0"
+source = "git+https://github.com/plurimath/umath-rs?rev=b071b67d8d2202909e97c1b860de5359dab0f09d#b071b67d8d2202909e97c1b860de5359dab0f09d"
+dependencies = [
+ "parsanol",
+ "serde_json",
 ]
 
 [[package]]
@@ -358,47 +438,42 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 
 [[package]]
-name = "serde"
-version = "1.0.229"
+name = "ryu"
+version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4148590afebada386688f18773da617792bf2ef03ffc1e4cbd2b1d45b023e0ba"
-dependencies = [
- "serde_core",
- "serde_derive",
-]
+checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
 
 [[package]]
-name = "serde_core"
-version = "1.0.229"
+name = "serde"
+version = "1.0.219"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67dca2c9c51e58a4791a4b1ed58308b39c64224d349a935ab5039aa360942a48"
+checksum = "5f0e2c6ed6606019b4e29e69dbaba95b11854410e5347d525002456dbbb786b6"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.229"
+version = "1.0.219"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7a5d71263a5a7d47b41f6b3f06ba276f10cc18b0931f1799f710578e2309348"
+checksum = "5b0276cf7f2c73365f7157c8123c21cd9a50fbbd844757af28ca1f5925fc2a00"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 2.0.119",
 ]
 
 [[package]]
 name = "serde_json"
-version = "1.0.151"
+version = "1.0.140"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c841b55ecdae098c80dcae9cf767f6f8a0c2cdb3416bbef72181df4d0fe73f14"
+checksum = "20068b6e96dc6c9bd23e01df8827e6c7e1f2fddd43c21810382803c136b99373"
 dependencies = [
  "indexmap",
  "itoa",
  "memchr",
+ "ryu",
  "serde",
- "serde_core",
- "zmij",
 ]
 
 [[package]]
@@ -425,9 +500,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "3.0.9"
+version = "3.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d78c8dee4c7bf0e14673097256fed6142ce9d3b85a408189d07482442145823b"
+checksum = "4ae9ccbea3a7b0b09443036490c8f34a8b1b760fd345e5c0dae0aac718faea79"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -457,6 +532,7 @@ dependencies = [
 [[package]]
 name = "unitsml-rs"
 version = "0.1.0"
+source = "git+https://github.com/unitsml/unitsml-rs?rev=cdfbcc3087f271d8723b3c3d1e4764860601e570#cdfbcc3087f271d8723b3c3d1e4764860601e570"
 dependencies = [
  "num-bigint",
  "num-rational",
@@ -511,7 +587,7 @@ dependencies = [
  "bumpalo",
  "proc-macro2",
  "quote",
- "syn 3.0.9",
+ "syn 3.0.10",
  "wasm-bindgen-shared",
 ]
 
@@ -549,9 +625,3 @@ dependencies = [
  "quote",
  "syn 2.0.119",
 ]
-
-[[package]]
-name = "zmij"
-version = "1.0.23"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"

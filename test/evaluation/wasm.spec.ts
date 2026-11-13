@@ -42,14 +42,37 @@ const sourceProfile = (() => {
   };
 })();
 const superseded = new Map(sourceProfile.superseded_legacy_rows.map((row) => [row.id, row]));
+// Rows whose expectation follows the Ruby source scale transitions (a difference
+// combined with an absolute temperature). Each names the governing source row.
+const scaleProfile = (() => {
+  const body = readFileSync(join(fixtures, manifest.scale_source_profile.file));
+  expect(createHash("sha256").update(body).digest("hex")).toBe(
+    manifest.scale_source_profile.sha256,
+  );
+  return JSON.parse(body.toString("utf8")) as {
+    superseded_legacy_rows: {
+      file: string;
+      id: string;
+      request_json: string;
+      legacy_expected_wire: string;
+      expected_wire: string;
+      source_row: string;
+    }[];
+  };
+})();
+const scaleSuperseded = new Map(
+  scaleProfile.superseded_legacy_rows.map((row) => [`${row.file}#${row.id}`, row]),
+);
 const vectors: Vector[] = Object.keys(manifest.vectors).flatMap((file) => {
   const body = readFileSync(join(fixtures, file));
   expect(createHash("sha256").update(body).digest("hex")).toBe(manifest.vectors[file].sha256);
   const rows = JSON.parse(body.toString("utf8")).cases as Vector[];
   expect(rows).toHaveLength(manifest.vectors[file].cases);
   return rows.map((row) => {
-    const next = superseded.get(row.id);
-    if (!next || file !== manifest.source_profile.legacy_file) return row;
+    const scale = scaleSuperseded.get(`${file}#${row.id}`);
+    const next =
+      scale ?? (file === manifest.source_profile.legacy_file ? superseded.get(row.id) : undefined);
+    if (!next) return row;
     expect(next.legacy_expected_wire).toBe(row.expected_wire);
     expect(next.request_json).toBe(row.request_json);
     return { ...row, expected_wire: next.expected_wire };
@@ -85,6 +108,9 @@ describe("evaluation/wasm", () => {
   it("accounts for every pinned wire profile", () => {
     expect(vectors).toHaveLength(manifest.vectors_total);
     expect([...superseded.keys()].sort()).toEqual(manifest.source_profile.superseded);
+    expect([...scaleSuperseded.values()].map(({ file, id }) => ({ file, id }))).toEqual(
+      manifest.scale_source_profile.superseded,
+    );
     expect(manifest.vectors["quantity-wasm-v1.json"].cases).toBe(162);
     expect(
       vectors.filter((v) => responseSchema(v) === "plurimath.evaluate.numeric/1"),

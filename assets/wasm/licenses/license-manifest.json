@@ -53,7 +53,7 @@
   {
     "package": "asciiunits",
     "version": "0.1.0",
-    "source": null,
+    "source": "git+https://github.com/unitsml/asciiunits-rs?rev=1f771caef878b9d383a5f29b02f434b8b614b780#1f771caef878b9d383a5f29b02f434b8b614b780",
     "license": "BSD-2-Clause",
     "declared_license_file": null,
     "notices": [
@@ -133,17 +133,17 @@
   },
   {
     "package": "const-oid",
-    "version": "0.10.2",
+    "version": "0.10.3",
     "source": "registry+https://github.com/rust-lang/crates.io-index",
     "license": "Apache-2.0 OR MIT",
     "declared_license_file": null,
     "notices": [
       {
-        "file": "licenses/const-oid-0.10.2/LICENSE-APACHE",
+        "file": "licenses/const-oid-0.10.3/LICENSE-APACHE",
         "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5"
       },
       {
-        "file": "licenses/const-oid-0.10.2/LICENSE-MIT",
+        "file": "licenses/const-oid-0.10.3/LICENSE-MIT",
         "sha256": "73b9dc2e79c7308998dd30296e073aefaefb944a68fb89aa412c23c0edcabcaa"
       }
     ]
@@ -299,17 +299,17 @@
   },
   {
     "package": "itoa",
-    "version": "1.0.18",
+    "version": "1.0.19",
     "source": "registry+https://github.com/rust-lang/crates.io-index",
     "license": "MIT OR Apache-2.0",
     "declared_license_file": null,
     "notices": [
       {
-        "file": "licenses/itoa-1.0.18/LICENSE-APACHE",
+        "file": "licenses/itoa-1.0.19/LICENSE-APACHE",
         "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
       },
       {
-        "file": "licenses/itoa-1.0.18/LICENSE-MIT",
+        "file": "licenses/itoa-1.0.19/LICENSE-MIT",
         "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
       }
     ]
@@ -431,27 +431,44 @@
   },
   {
     "package": "parsanol",
-    "version": "0.20.12",
-    "source": "git+https://github.com/parsanol/parsanol-rs?rev=20d5e6cebcade3cf2111a00a7ef3f5b69d673481#20d5e6cebcade3cf2111a00a7ef3f5b69d673481",
+    "version": "0.20.14",
+    "source": "git+https://github.com/parsanol/parsanol-rs?rev=5206a33b5417b4ecd3a601930461ed2967c871e7#5206a33b5417b4ecd3a601930461ed2967c871e7",
     "license": "MIT",
     "declared_license_file": null,
     "notices": [
       {
-        "file": "licenses/parsanol-0.20.12/LICENSE",
+        "file": "licenses/parsanol-0.20.14/LICENSE",
         "sha256": "47f4778bc0bfbeb3614d173dd1ec09ddd8cab994039193e2d3de2edcd7886c7e"
       }
     ]
   },
   {
     "package": "parsanol-derive",
-    "version": "0.20.12",
-    "source": "git+https://github.com/parsanol/parsanol-rs?rev=20d5e6cebcade3cf2111a00a7ef3f5b69d673481#20d5e6cebcade3cf2111a00a7ef3f5b69d673481",
+    "version": "0.20.14",
+    "source": "git+https://github.com/parsanol/parsanol-rs?rev=5206a33b5417b4ecd3a601930461ed2967c871e7#5206a33b5417b4ecd3a601930461ed2967c871e7",
     "license": "MIT",
     "declared_license_file": null,
     "notices": [
       {
-        "file": "licenses/parsanol-derive-0.20.12/LICENSE",
+        "file": "licenses/parsanol-derive-0.20.14/LICENSE",
         "sha256": "47f4778bc0bfbeb3614d173dd1ec09ddd8cab994039193e2d3de2edcd7886c7e"
+      }
+    ]
+  },
+  {
+    "package": "plurimath-json",
+    "version": "0.1.0",
+    "source": null,
+    "license": "BSD-2-Clause",
+    "declared_license_file": null,
+    "notices": [
+      {
+        "file": "licenses/plurimath-json-0.1.0/LICENSE",
+        "sha256": "8bb27670459027923124649be6582f3325a3ac9b1df5503130f2633a66f97938"
+      },
+      {
+        "file": "licenses/plurimath-json-0.1.0/NOTICE",
+        "sha256": "541ca7b7e96ef962e30a8eab625cd481d6aa555f5a431af47c8eea053eb228af"
       }
     ]
   },
@@ -575,69 +592,69 @@
     ]
   },
   {
-    "package": "serde",
-    "version": "1.0.229",
+    "package": "ryu",
+    "version": "1.0.23",
     "source": "registry+https://github.com/rust-lang/crates.io-index",
-    "license": "MIT OR Apache-2.0",
+    "license": "Apache-2.0 OR BSL-1.0",
     "declared_license_file": null,
     "notices": [
       {
-        "file": "licenses/serde-1.0.229/LICENSE-APACHE",
+        "file": "licenses/ryu-1.0.23/LICENSE-APACHE",
         "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
       },
       {
-        "file": "licenses/serde-1.0.229/LICENSE-MIT",
-        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+        "file": "licenses/ryu-1.0.23/LICENSE-BOOST",
+        "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566"
       }
     ]
   },
   {
-    "package": "serde_core",
-    "version": "1.0.229",
+    "package": "serde",
+    "version": "1.0.219",
     "source": "registry+https://github.com/rust-lang/crates.io-index",
     "license": "MIT OR Apache-2.0",
     "declared_license_file": null,
     "notices": [
       {
-        "file": "licenses/serde_core-1.0.229/LICENSE-APACHE",
+        "file": "licenses/serde-1.0.219/LICENSE-APACHE",
         "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
       },
       {
-        "file": "licenses/serde_core-1.0.229/LICENSE-MIT",
+        "file": "licenses/serde-1.0.219/LICENSE-MIT",
         "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
       }
     ]
   },
   {
     "package": "serde_derive",
-    "version": "1.0.229",
+    "version": "1.0.219",
     "source": "registry+https://github.com/rust-lang/crates.io-index",
     "license": "MIT OR Apache-2.0",
     "declared_license_file": null,
     "notices": [
       {
-        "file": "licenses/serde_derive-1.0.229/LICENSE-APACHE",
+        "file": "licenses/serde_derive-1.0.219/LICENSE-APACHE",
         "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
       },
       {
-        "file": "licenses/serde_derive-1.0.229/LICENSE-MIT",
+        "file": "licenses/serde_derive-1.0.219/LICENSE-MIT",
         "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
       }
     ]
   },
   {
     "package": "serde_json",
-    "version": "1.0.151",
+    "version": "1.0.140",
     "source": "registry+https://github.com/rust-lang/crates.io-index",
     "license": "MIT OR Apache-2.0",
     "declared_license_file": null,
     "notices": [
       {
-        "file": "licenses/serde_json-1.0.151/LICENSE-APACHE",
+        "file": "licenses/serde_json-1.0.140/LICENSE-APACHE",
         "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
       },
       {
-        "file": "licenses/serde_json-1.0.151/LICENSE-MIT",
+        "file": "licenses/serde_json-1.0.140/LICENSE-MIT",
         "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
       }
     ]
@@ -661,17 +678,34 @@
   },
   {
     "package": "syn",
-    "version": "3.0.9",
+    "version": "2.0.119",
     "source": "registry+https://github.com/rust-lang/crates.io-index",
     "license": "MIT OR Apache-2.0",
     "declared_license_file": null,
     "notices": [
       {
-        "file": "licenses/syn-3.0.9/LICENSE-APACHE",
+        "file": "licenses/syn-2.0.119/LICENSE-APACHE",
         "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
       },
       {
-        "file": "licenses/syn-3.0.9/LICENSE-MIT",
+        "file": "licenses/syn-2.0.119/LICENSE-MIT",
+        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+      }
+    ]
+  },
+  {
+    "package": "syn",
+    "version": "3.0.10",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "license": "MIT OR Apache-2.0",
+    "declared_license_file": null,
+    "notices": [
+      {
+        "file": "licenses/syn-3.0.10/LICENSE-APACHE",
+        "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+      },
+      {
+        "file": "licenses/syn-3.0.10/LICENSE-MIT",
         "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
       }
     ]
@@ -721,7 +755,7 @@
   {
     "package": "unitsdb-rs",
     "version": "0.1.0",
-    "source": null,
+    "source": "git+https://github.com/unitsml/unitsdb-rs?rev=969a131b8992930a6ff6f869291f1f0d7cb68d33#969a131b8992930a6ff6f869291f1f0d7cb68d33",
     "license": null,
     "declared_license_file": "LICENSE.md",
     "notices": [
@@ -734,7 +768,7 @@
   {
     "package": "unitsml-rs",
     "version": "0.1.0",
-    "source": null,
+    "source": "git+https://github.com/unitsml/unitsml-rs?rev=cdfbcc3087f271d8723b3c3d1e4764860601e570#cdfbcc3087f271d8723b3c3d1e4764860601e570",
     "license": null,
     "declared_license_file": "LICENSE.md",
     "notices": [
@@ -847,19 +881,6 @@
       {
         "file": "licenses/zerocopy-0.8.63/LICENSE-MIT",
         "sha256": "1a2f5c12ddc934d58956aa5dbdd3255fe55fd957633ab7d0d39e4f0daa73f7df"
-      }
-    ]
-  },
-  {
-    "package": "zmij",
-    "version": "1.0.23",
-    "source": "registry+https://github.com/rust-lang/crates.io-index",
-    "license": "MIT",
-    "declared_license_file": null,
-    "notices": [
-      {
-        "file": "licenses/zmij-1.0.23/LICENSE-MIT",
-        "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
       }
     ]
   }

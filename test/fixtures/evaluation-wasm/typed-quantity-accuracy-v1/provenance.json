@@ -31,5 +31,7 @@
   "comparison": "expected records the observed Ruby library result; ruby_wire preserves the historical decoder response and is not a typed-kernel success oracle",
   "unit_maps_sha256": "ef9a6e951f205fa54fa805c84a2784a0ea963f63dcfe9be75748bd3a79f63f78",
   "converted_sha256": "d2a9271a11bcc0ee63fd11564177aa574f9ec1e5df8446a936f9d8809c81557a",
-  "converted_generation": "additive extra two observed Ruby converted-tagged quantities; original36unchanged"
+  "converted_generation": "additive extra two observed Ruby converted-tagged quantities; original36unchanged",
+  "final_source_38_sha256": "e527a1eed583620eb85a4dc1fff7c1f30c748a2a34598844928f4aceacb52846",
+  "final_source_38": "Copy of the plurimath.final-typed-quantity-consumer/1 packet (sha256 91015c84bde4479661280effc3dd790fcac29243c7436e41bf46097df1eeead5; 36 typed + 2 converted) with source.path reduced to its file name. Each expected value is the complete kernel response at plurimath-rs f6ba2bad, derived from final-quantity-source-v3.json (sha256 a944397cb1c4a6974b5876ad7e21aef680330448580d370db4843fc516fd7f74)."
 }

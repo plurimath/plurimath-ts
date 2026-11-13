@@ -164,6 +164,7 @@ const EXPECTED_EXPORTS = {
   "./evaluation/wasm": [
     "NUMERIC_WASM_ASSET",
     "NumericWasmError",
+    "evaluateQuantityRequest",
     "initNumericWasm",
     "numericWasmFromExports",
   ],
@@ -240,9 +241,11 @@ const optionalReaderOutside = (format) =>
 
 // The WASM facade is transport only: no format, parser, XML, locale table or
 // TypeScript evaluator module may ship in it (no independent evaluator).
-// The only other module is the kernel's verbatim wasm-bindgen glue.
+// The only other modules are the kernel's verbatim wasm-bindgen glue and the
+// typed quantity request/response transport (types plus a JSON pass-through).
 const WASM_GLUE = /(?:^|\/)evaluation\/quantity-wasm\/numeric\.js$/;
-const WASM_FACADE_ONLY = /^(?!(?:src\/)?evaluation\/(?:wasm\.ts|quantity-wasm\/numeric\.js)$)/;
+const WASM_FACADE_ONLY =
+  /^(?!(?:src\/)?evaluation\/(?:wasm\.ts|quantity-wire\.ts|quantity-wasm\/numeric\.js)$)/;
 
 const FORBIDDEN = {
   // The root is intentionally full-sized; only subpath imports are slim.

@@ -155,6 +155,21 @@ module.exports = {
       to: { path: "^src/evaluation/" },
     },
     {
+      name: "facade-is-self-contained",
+      comment:
+        "The native format facade entry is transport only: it imports no TypeScript parser, renderer, core or evaluator module.",
+      severity: "error",
+      from: { path: "^src/facade/" },
+      to: { path: "^src/", pathNot: "^src/facade/" },
+    },
+    {
+      name: "nothing-imports-facade",
+      comment: "Only the ./facade/wasm package entry reaches the facade transport.",
+      severity: "error",
+      from: { path: "^src/", pathNot: "^src/facade/" },
+      to: { path: "^src/facade/" },
+    },
+    {
       name: "no-circular",
       comment: "Circular imports break the layering and the ESM initialisation order.",
       severity: "error",

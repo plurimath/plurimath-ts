@@ -168,6 +168,16 @@ const EXPECTED_EXPORTS = {
     "initNumericWasm",
     "numericWasmFromExports",
   ],
+  "./facade/wasm": [
+    "FACADE_WASM_ASSET",
+    "FacadeError",
+    "FacadeWasmError",
+    "Formula",
+    "RUBY_VALUES_PROFILE",
+    "SourceFormula",
+    "facadeWasmFromExports",
+    "initFacadeWasm",
+  ],
   "./asciimath": ["parseAsciimath", "toAsciimath"],
   "./asciimath/amath": ["createAsciimathParser"],
   "./latex/latexmath": ["createLatexParser"],
@@ -247,10 +257,17 @@ const WASM_GLUE = /(?:^|\/)evaluation\/quantity-wasm\/numeric\.js$/;
 const WASM_FACADE_ONLY =
   /^(?!(?:src\/)?evaluation\/(?:wasm\.ts|quantity-wire\.ts|quantity-wasm\/numeric\.js)$)/;
 
+// The format facade is transport only as well: its loader, the generated pin
+// and the official wasm-bindgen glue, and no TypeScript parser, renderer or
+// evaluator (no duplicate implementation beside the native facade).
+const FACADE_GLUE = /(?:^|\/)facade\/facade-wasm\/facade\.js$/;
+const FACADE_ONLY = /^(?!(?:src\/)?facade\/(?:wasm\.ts|asset\.ts|facade-wasm\/facade\.js)$)/;
+
 const FORBIDDEN = {
   // The root is intentionally full-sized; only subpath imports are slim.
   ".": NO_FORBIDDEN_SOURCES,
   "./evaluation/wasm": [WASM_FACADE_ONLY],
+  "./facade/wasm": [FACADE_ONLY],
   "./core": [...forbidOtherFormats(), /pegkit\//, LOCALE_DECIMALS, LOCALE_GROUPS],
   "./asciimath": [...forbidOtherFormats("asciimath"), /xml\//, LOCALE_GROUPS],
   "./latex/latexmath": [
@@ -299,6 +316,7 @@ const FORBIDDEN = {
 /** Sources a subpath's artifact must contain — the positive control for `FORBIDDEN`'s locale rows. */
 const REQUIRED = {
   "./evaluation/wasm": [/(?:^|\/)evaluation\/wasm\.ts$/, WASM_GLUE],
+  "./facade/wasm": [/(?:^|\/)facade\/wasm\.ts$/, FACADE_GLUE],
   "./mathml/leptris": [/(?:^|\/)xml\/leptris\.ts$/, /(?:^|\/)formats\/mathml\/translator\.ts$/],
   "./omml/leptris": [/(?:^|\/)xml\/leptris\.ts$/, /(?:^|\/)formats\/omml\/translator\.ts$/],
   "./asciimath": [LOCALE_DECIMALS],
@@ -327,7 +345,29 @@ const ASSET_EXPORTS = {
 const HTML_ASSET_EXPORTS = JSON.parse(
   readFileSync(resolve(root, "assets/html/manifest.json"), "utf8"),
 ).artifacts;
-const NON_CODE_EXPORTS = { ...ASSET_EXPORTS, ...HTML_ASSET_EXPORTS };
+/**
+ * The facade binary is exported only once `assets/facade/manifest.json` is
+ * pinned (`scripts/pin-facade-wasm.mjs`); while it is pending the export must
+ * be absent, so a package can never name a binary it does not ship.
+ */
+const FACADE_ASSET_EXPORT = "./facade/plurimath_facade.wasm";
+const facadePin = JSON.parse(readFileSync(resolve(root, "assets/facade/manifest.json"), "utf8"));
+if (facadePin.status !== "pinned" && Object.hasOwn(pkg.exports, FACADE_ASSET_EXPORT))
+  fail(
+    `${FACADE_ASSET_EXPORT} is exported while assets/facade/manifest.json is ${facadePin.status}`,
+  );
+if (
+  facadePin.status === "pinned" &&
+  pkg.exports[FACADE_ASSET_EXPORT] !== `./dist/${facadePin.file}`
+)
+  fail(`${FACADE_ASSET_EXPORT} must map to ./dist/${facadePin.file}`);
+const NON_CODE_EXPORTS = {
+  ...ASSET_EXPORTS,
+  ...HTML_ASSET_EXPORTS,
+  ...(facadePin.status === "pinned"
+    ? { [FACADE_ASSET_EXPORT]: "assets/facade/manifest.json" }
+    : {}),
+};
 const subpaths = Object.entries(pkg.exports).filter(
   ([key]) => key !== "./package.json" && !Object.hasOwn(NON_CODE_EXPORTS, key),
 );
@@ -603,6 +643,65 @@ for (const [key, manifestPath] of Object.entries(ASSET_EXPORTS)) {
   const drift = pinned.filter(([path, digest]) => !existsSync(path) || sha(path) !== digest);
   for (const [path] of drift) fail(`${path} is missing or differs from ${manifestPath}`);
   if (drift.length === 0) console.log(`  ✓ ${pinned.length} pinned companion files byte-exact`);
+}
+
+// 3b. the facade pin: binary (once pinned), glue, licences, notices, every
+// dependency notice and Cargo.lock, byte-exact against assets/facade/manifest.json.
+console.log("\nfacade asset");
+{
+  const pin = facadePin;
+  const sha = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
+  const source = readFileSync(resolve(root, "src/facade/asset.ts"), "utf8");
+  if (!source.includes(`status: "${pin.status}"`))
+    fail(`src/facade/asset.ts does not carry the manifest status ${pin.status}`);
+  if (
+    !source.includes(`revision: "${pin.source.revision}"`) ||
+    !source.includes(`sha256: "${pin.glue.sha256}"`)
+  )
+    fail("src/facade/asset.ts does not pin the manifest source revision and glue digest");
+  const pinned = [
+    [resolve(root, pin.glue.file), pin.glue.sha256],
+    [resolve(root, pin.glue.types_file), pin.glue.types_sha256],
+    [resolve(root, "dist/plurimath_facade.Cargo.lock"), pin.source.cargo_lock.sha256],
+  ];
+  for (const notice of pin.notices)
+    pinned.push([
+      resolve(root, "dist/plurimath_facade.notices", notice.file.slice(8)),
+      notice.sha256,
+    ]);
+  const listing = resolve(root, "assets/facade", pin.dependency_notices.manifest);
+  pinned.push([listing, pin.dependency_notices.sha256]);
+  const groups = JSON.parse(readFileSync(listing, "utf8"));
+  if (groups.length !== pin.dependency_notices.groups)
+    fail(`${pin.dependency_notices.manifest} lists ${groups.length} groups`);
+  for (const group of groups) {
+    if (
+      group.notices.length === 0 &&
+      !Object.hasOwn(pin.dependency_notices.without_notice_files, group.package)
+    )
+      fail(`${group.package} has no notice file and no recorded reason`);
+    for (const notice of group.notices)
+      pinned.push([
+        resolve(root, "dist/plurimath_facade.licenses", notice.file.slice(9)),
+        notice.sha256,
+      ]);
+  }
+  if (pin.status === "pinned") {
+    if (!source.includes(`sha256: "${pin.sha256}"`) || !source.includes(`bytes: ${pin.bytes} `))
+      fail("src/facade/asset.ts FACADE_WASM_ASSET does not pin the manifest binary");
+    const file = resolve(root, "dist", pin.file);
+    if (!existsSync(file) || readFileSync(file).length !== pin.bytes)
+      fail(`dist/${pin.file} is missing or has the wrong size`);
+    pinned.push([file, pin.sha256]);
+  } else {
+    if (pin.sha256 !== null || existsSync(resolve(root, "dist", pin.file)))
+      fail("a pending facade pin must name no binary and ship none");
+    console.log("  · facade binary pending: run scripts/pin-facade-wasm.mjs with the final packet");
+  }
+  const drift = pinned.filter(([path, digest]) => !existsSync(path) || sha(path) !== digest);
+  for (const [path] of drift)
+    fail(`${path} is missing or differs from assets/facade/manifest.json`);
+  if (drift.length === 0) console.log(`  ✓ ${pinned.length} pinned facade files byte-exact`);
 }
 
 // 4. the compat class's declaration surface, from the BUILT declaration files

@@ -198,6 +198,41 @@ jobs:
           path: ${{ runner.temp }}/packed-quantity.json*
           if-no-files-found: warn
 
+  # The native format facade through the packed package: the full frozen
+  # 3798/1349 source corpus, the 87 text shapes, typed source values and the
+  # API/wire contract with allocation accounting, in Node ESM and CJS (Linux
+  # and Windows) and in actual Chrome. Fails, naming the pin step, while
+  # assets/facade/manifest.json is still pending.
+  packed-facade:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-24.04, runtime: esm }
+          - { os: ubuntu-24.04, runtime: cjs }
+          - { os: ubuntu-24.04, runtime: chrome }
+          - { os: windows-latest, runtime: esm }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Replay the facade corpus through the packed package
+        run: node scripts/check-facade-packed.mjs ${{ matrix.runtime }} "${{ runner.temp }}/packed-facade.json"
+      - if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: packed-facade-${{ matrix.os }}-${{ matrix.runtime }}
+          path: ${{ runner.temp }}/packed-facade.json*
+          if-no-files-found: warn
+
   # Ruby-backed unit regressions are class B, isolated from the Node-only
   # class-A suite and run with an explicit interpreter rather than relying on
   # whatever happens to be installed on the runner image.

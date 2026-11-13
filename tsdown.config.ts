@@ -1,4 +1,11 @@
+import { readFileSync } from "node:fs";
 import { defineConfig } from "tsdown";
+
+/** The facade WASM pin: the binary ships only once it is pinned. */
+const facadeManifest = JSON.parse(readFileSync("assets/facade/manifest.json", "utf8")) as {
+  status: "pending" | "pinned";
+  file: string;
+};
 
 /**
  * One physical entry per published subpath (ARCHITECTURE.md §3): source-level
@@ -64,6 +71,35 @@ export default defineConfig([
       { from: "assets/wasm/NOTICE", to: "dist", rename: "plurimath_numeric.NOTICE" },
       { from: "assets/wasm/Cargo.lock", to: "dist", rename: "plurimath_numeric.Cargo.lock" },
       { from: "assets/wasm/licenses", to: "dist", rename: "plurimath_numeric.licenses" },
+    ],
+  },
+  /**
+   * `./facade/wasm`, built on its own for the same reason as
+   * `./evaluation/wasm`: it bundles the facade's verbatim wasm-bindgen glue,
+   * whose default-asset branch is unreachable because the loader always hands
+   * it a verified, compiled module. The facade licences, notices, every
+   * dependency notice and the Cargo.lock source pin ship beside it; the binary
+   * ships only once `assets/facade/manifest.json` is pinned
+   * (`scripts/pin-facade-wasm.mjs`), and package.json then exports it as
+   * `./facade/plurimath_facade.wasm`.
+   */
+  {
+    entry: { "facade-wasm": "src/facade/wasm.ts" },
+    format: ["esm", "cjs"],
+    platform: "neutral",
+    target: "es2022",
+    dts: true,
+    sourcemap: true,
+    clean: false,
+    treeshake: true,
+    define: { "import.meta.url": "undefined" },
+    copy: [
+      ...(facadeManifest.status === "pinned"
+        ? [{ from: `assets/facade/${facadeManifest.file}`, to: "dist" }]
+        : []),
+      { from: "assets/facade/notices", to: "dist", rename: "plurimath_facade.notices" },
+      { from: "assets/facade/Cargo.lock", to: "dist", rename: "plurimath_facade.Cargo.lock" },
+      { from: "assets/facade/licenses", to: "dist", rename: "plurimath_facade.licenses" },
     ],
   },
   /**

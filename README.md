@@ -192,6 +192,53 @@ include signed residuals and the selected rule's boundary decision. The
 kernel returns typed refusals for unsupported sampling profiles. The pinned request and response examples are in
 [`test/fixtures/evaluation-wasm`](test/fixtures/evaluation-wasm).
 
+### Native format facade with WASM
+
+`@plurimath/plurimath-ts/facade/wasm` loads the Rust `plurimath-facade` crate
+compiled to WebAssembly. It parses AsciiMath, HTML, LaTeX, MathML, OMML, PMA,
+UnicodeMath and UnitsML, keeps the common `{class, fields}` model, and writes
+AsciiMath, LaTeX, UnicodeMath, HTML, MathML and OMML. Parsing, options and
+writers all run in the native facade; this entry only moves JSON requests in
+and out of the module. It does not use the TypeScript parsers or renderers.
+
+Initialize it once with the bundled
+`@plurimath/plurimath-ts/facade/plurimath_facade.wasm` bytes, a `fetch`
+response or a `URL`. The SHA-256 of the asset is checked before it is
+compiled. Calling `initFacadeWasm` again with the same asset returns the same
+kernel.
+
+```ts
+import { FacadeError, initFacadeWasm } from "@plurimath/plurimath-ts/facade/wasm";
+
+const kernel = await initFacadeWasm(wasmBytes);
+const formula = kernel.parse("x^2", "asciimath");
+console.log(formula.toMathml());
+console.log(formula.write("latex", { formatterOptions: null }));
+try {
+  kernel.parse("\\frac{", "latex");
+} catch (error) {
+  if (error instanceof FacadeError) console.error(error.code, error.sourceClass);
+}
+```
+
+Parse and writer options are passed to the native facade unchanged. A refusal
+from the facade throws `FacadeError` with the native `code`, the Ruby
+`sourceClass` when there is one, and the complete error object in `details`.
+Loading and transport problems throw `FacadeWasmError`. `kernel.requestJson`
+sends one raw JSON request and returns the native envelope unchanged.
+`kernel.fromModel(model)` accepts a common model, and `kernel.fromSourceModel`
+accepts a `plurimath.ruby-values/1` document. `formula.model` returns a fresh
+copy each time. A request can be at most 16 MiB. The kernel allocates the input
+for each call and frees the input and the result exactly once;
+`kernel.accounting()` reports these counts.
+
+The asset, its official wasm-bindgen glue, licences, notices, the notices of
+every Rust dependency and the source `Cargo.lock` are pinned in
+[`assets/facade/manifest.json`](assets/facade/manifest.json). The package test
+replays the frozen source corpus in
+[`test/fixtures/facade`](test/fixtures/facade) through the packed package in
+Node and Chrome: `node scripts/check-facade-packed.mjs all`.
+
 ### Typed quantity values
 
 Use `evaluateQuantityRequest(kernel, request)` from the same WASM entry after

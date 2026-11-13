@@ -62,6 +62,8 @@ const PUBLISHED_FORMAT_SUBPATHS = Object.keys(packageJson.exports).filter(
     subpath !== "./package.json" &&
     subpath !== "./evaluation/wasm" &&
     subpath !== "./evaluation/plurimath_numeric.wasm" &&
+    subpath !== "./facade/wasm" &&
+    subpath !== "./facade/plurimath_facade.wasm" &&
     !subpath.startsWith("./html/artifacts/"),
 );
 

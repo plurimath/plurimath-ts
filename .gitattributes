@@ -3,3 +3,6 @@
 assets/wasm/** -text
 src/evaluation/quantity-wasm/** -text
 test/fixtures/evaluation-wasm/** -text
+assets/facade/** -text
+src/facade/facade-wasm/** -text
+test/fixtures/facade/** -text

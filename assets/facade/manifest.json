@@ -1,0 +1,87 @@
+{
+  "schema": "plurimath-ts.facade-wasm-asset/1",
+  "status": "pinned",
+  "file": "plurimath_facade.wasm",
+  "sha256": "f9c480c8aadb51dc4faef7b5a2562bb2b206b24099ca2ea456f256a8c488ff8c",
+  "bytes": 19457727,
+  "abi": 1,
+  "max_request_bytes": 16777216,
+  "source": {
+    "repository": "https://github.com/plurimath/plurimath-rs",
+    "crate": "plurimath-facade",
+    "revision": "7f1226364033e69075586d3f43a1a696dfa5f35b",
+    "wasm_target": "wasm32-unknown-unknown",
+    "compiler": "rustc 1.95.0",
+    "wasm_bindgen": "wasm-bindgen 0.2.130",
+    "build": {
+      "cargo": [
+        "build",
+        "--manifest-path",
+        "Cargo.toml",
+        "--locked",
+        "--offline",
+        "-p",
+        "plurimath-facade",
+        "--lib",
+        "--target",
+        "wasm32-unknown-unknown",
+        "--config",
+        "profile.dev.opt-level=2",
+        "--config",
+        "profile.dev.package.parsanol.opt-level=2",
+        "--config",
+        "profile.dev.package.plurimath-facade.opt-level=2"
+      ],
+      "stack_bytes": 8388608,
+      "raw_wasm_sha256": "570ab03388e12a28b88ae13152f30fa70de6e06d828b7f588e8bb28969304e7e",
+      "wasm_bindgen_sha256": "ca4df773020dae87d92b9eadb2b85412bea7a9cf6318ab9999dd119fd9f46931"
+    },
+    "cargo_lock": {
+      "file": "Cargo.lock",
+      "sha256": "65169a36e87a15e0a6a5bb2cdaba17fbf7e606621c25ce1d4df143dc3a0c00b4"
+    }
+  },
+  "glue": {
+    "file": "src/facade/facade-wasm/facade.js",
+    "sha256": "f2219a10b43a4da7bdeab94f424e08e3f902d22c3897c05e971f97d6f6a86a2d",
+    "types_file": "src/facade/facade-wasm/facade.d.ts",
+    "types_sha256": "736e05a797eb16401ec337cde85c910f9bbf7191ff6cc99066f2333ccba0eb20"
+  },
+  "notices": [
+    {
+      "file": "notices/plurimath-facade-LICENSE",
+      "source": "plurimath-facade/LICENSE",
+      "sha256": "8bb27670459027923124649be6582f3325a3ac9b1df5503130f2633a66f97938"
+    },
+    {
+      "file": "notices/plurimath-facade-NOTICE",
+      "source": "plurimath-facade/NOTICE",
+      "sha256": "541ca7b7e96ef962e30a8eab625cd481d6aa555f5a431af47c8eea053eb228af"
+    },
+    {
+      "file": "notices/plurimath-facade-SOURCE-PROVENANCE.json",
+      "source": "plurimath-facade/SOURCE-PROVENANCE.json",
+      "sha256": "d17d6aca7517d6bc7ee2d8b446f13d492cdb3ca65facff98a237f89c11cfeab7"
+    },
+    {
+      "file": "notices/plurimath-numeric-LICENSE",
+      "source": "plurimath-numeric/LICENSE",
+      "sha256": "8bb27670459027923124649be6582f3325a3ac9b1df5503130f2633a66f97938"
+    },
+    {
+      "file": "notices/plurimath-numeric-NOTICE",
+      "source": "plurimath-numeric/NOTICE",
+      "sha256": "07f8146e32963ed2960fd26041f13d95f2511a1b1b6dec0e7ebcadb0ef9fae64"
+    }
+  ],
+  "dependency_notices": {
+    "manifest": "licenses/license-manifest.json",
+    "sha256": "93fdca708ce5ae0c3f2d181d9e5c7feaef02edd8d51c85165635fabf0dc673a3",
+    "groups": 56,
+    "closure": "normal and build dependencies of plurimath-facade for wasm32-unknown-unknown, from cargo metadata of plurimath-rs 7f12263 with its Cargo.lock",
+    "without_notice_files": {
+      "lutaml-rs": "BSD-2-Clause declared in Cargo.toml; the pinned git revision 945e6ad ships no licence file",
+      "moxml": "MIT declared in Cargo.toml; the pinned git revision e49cdfc ships no licence file"
+    }
+  }
+}

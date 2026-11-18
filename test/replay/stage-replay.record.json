@@ -8,36 +8,11 @@
     "differing": 0,
     "unsupported": 31,
     "kinds": {
-      "facade": [
-        93,
-        92,
-        0,
-        1
-      ],
-      "typed-model": [
-        20,
-        0,
-        0,
-        20
-      ],
-      "calls": [
-        68,
-        68,
-        0,
-        0
-      ],
-      "rejection": [
-        13,
-        13,
-        0,
-        0
-      ],
-      "raw-tree": [
-        20,
-        10,
-        0,
-        10
-      ]
+      "facade": [93, 92, 0, 1],
+      "typed-model": [20, 0, 0, 20],
+      "calls": [68, 68, 0, 0],
+      "rejection": [13, 13, 0, 0],
+      "raw-tree": [20, 10, 0, 10]
     },
     "unsupportedRows": {
       "superseded by its -r2 sibling, which is replayed instead": {
@@ -93,30 +68,10 @@
     "differing": 0,
     "unsupported": 234,
     "kinds": {
-      "facade": [
-        125,
-        125,
-        0,
-        0
-      ],
-      "typed-model": [
-        247,
-        13,
-        0,
-        234
-      ],
-      "raw-tree": [
-        139,
-        139,
-        0,
-        0
-      ],
-      "rejection": [
-        14,
-        14,
-        0,
-        0
-      ]
+      "facade": [125, 125, 0, 0],
+      "typed-model": [247, 13, 0, 234],
+      "raw-tree": [139, 139, 0, 0],
+      "rejection": [14, 14, 0, 0]
     },
     "unsupportedRows": {
       "typed-model: the row is Latexmath.parse's own typed model (Latexmath::Model::Document); plurimath-ts parses LaTeX straight into the Plurimath Math::Core model and builds no Latexmath model": {
@@ -375,30 +330,10 @@
     "differing": 4,
     "unsupported": 688,
     "kinds": {
-      "facade": [
-        20,
-        20,
-        0,
-        0
-      ],
-      "typed-model": [
-        747,
-        57,
-        2,
-        688
-      ],
-      "raw-tree": [
-        747,
-        745,
-        2,
-        0
-      ],
-      "rejection": [
-        52,
-        52,
-        0,
-        0
-      ]
+      "facade": [20, 20, 0, 0],
+      "typed-model": [747, 57, 2, 688],
+      "raw-tree": [747, 745, 2, 0],
+      "rejection": [52, 52, 0, 0]
     },
     "unsupportedRows": {
       "typed-model: the row is Umath.parse's own typed model (Umath::Model::Document); plurimath-ts parses UnicodeMath straight into the Plurimath Math::Core model and builds no Umath model": {
@@ -1111,24 +1046,9 @@
     "differing": 0,
     "unsupported": 294,
     "kinds": {
-      "facade": [
-        287,
-        287,
-        0,
-        0
-      ],
-      "model-roundtrip": [
-        302,
-        8,
-        0,
-        294
-      ],
-      "rejection": [
-        14,
-        14,
-        0,
-        0
-      ]
+      "facade": [287, 287, 0, 0],
+      "model-roundtrip": [302, 8, 0, 294],
+      "rejection": [14, 14, 0, 0]
     },
     "unsupportedRows": {
       "model-roundtrip: the row is the mml gem's lutaml model (Mml::V3::Math) and its to_xml bytes; plurimath-ts reads MathML into its own element tree and has neither that model nor that serializer": {
@@ -1431,9 +1351,7 @@
       },
       "superseded by its -r2 sibling, which is replayed instead": {
         "count": 1,
-        "ids": [
-          "mathml-partial-019.model-roundtrip"
-        ]
+        "ids": ["mathml-partial-019.model-roundtrip"]
       }
     },
     "differingRows": {}
@@ -1447,24 +1365,9 @@
     "differing": 0,
     "unsupported": 192,
     "kinds": {
-      "facade": [
-        190,
-        190,
-        0,
-        0
-      ],
-      "model-roundtrip": [
-        199,
-        7,
-        0,
-        192
-      ],
-      "rejection": [
-        9,
-        9,
-        0,
-        0
-      ]
+      "facade": [190, 190, 0, 0],
+      "model-roundtrip": [199, 7, 0, 192],
+      "rejection": [9, 9, 0, 0]
     },
     "unsupportedRows": {
       "model-roundtrip: the row is the omml gem's lutaml model (Omml::Models::OMathPara) and its to_xml bytes; plurimath-ts reads OMML into its own element tree and has neither that model nor that serializer": {
@@ -1676,12 +1579,7 @@
     "differing": 0,
     "unsupported": 0,
     "kinds": {
-      "rejection": [
-        38,
-        38,
-        0,
-        0
-      ]
+      "rejection": [38, 38, 0, 0]
     },
     "unsupportedRows": {},
     "differingRows": {}
@@ -1695,12 +1593,7 @@
     "differing": 0,
     "unsupported": 46,
     "kinds": {
-      "roundtrip": [
-        92,
-        46,
-        0,
-        46
-      ]
+      "roundtrip": [92, 46, 0, 46]
     },
     "unsupportedRows": {
       "superseded by its -r2 sibling, which is replayed instead": {

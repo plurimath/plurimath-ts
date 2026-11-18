@@ -21,11 +21,7 @@
 
 import { type FormulaNode, ParseError } from "../../core/index";
 import { ParseFailed, type ParseValue, type SourceMap } from "../../pegkit/index";
-import {
-  type AsciimathParseOptions,
-  transformAsciimathTree,
-  validateOptions,
-} from "./consumer";
+import { type AsciimathParseOptions, transformAsciimathTree, validateOptions } from "./consumer";
 
 export type { AsciimathParseOptions } from "./consumer";
 

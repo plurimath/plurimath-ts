@@ -42,7 +42,7 @@ const writers = {
   omml: toOmml,
   html: toHtml,
 };
-const generations = { asciimath: 3, latex: 3, unicode: 4, mathml: 2, omml: 2 };
+const generations = { asciimath: 3, latex: 4, unicode: 4, mathml: 2, omml: 2 };
 const expectedCounts = { asciimath: 160, latex: 125, unicode: 20, mathml: 287, omml: 190 };
 const sources = [];
 const cases = [];

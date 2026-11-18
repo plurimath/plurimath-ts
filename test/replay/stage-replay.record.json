@@ -4,11 +4,11 @@
     "generation": 5,
     "snapshotDigest": "sha256:d3ee5a267373c235e555f2c0d01ae72e730ea2648113adcf7b0c87238b0ff63b",
     "rows": 214,
-    "equal": 183,
-    "differing": 0,
+    "equal": 181,
+    "differing": 2,
     "unsupported": 31,
     "kinds": {
-      "facade": [93, 92, 0, 1],
+      "facade": [93, 90, 2, 1],
       "typed-model": [20, 0, 0, 20],
       "calls": [68, 68, 0, 0],
       "rejection": [13, 13, 0, 0],
@@ -57,7 +57,10 @@
         ]
       }
     },
-    "differingRows": {}
+    "differingRows": {
+      "colour-named": "unicodemath bytes differ",
+      "colour-in-sum": "unicodemath bytes differ"
+    }
   },
   "latex": {
     "commit": "9767c37a8d7bb21a0694780ecfcbc4f1fbd9eb39",
@@ -326,13 +329,13 @@
     "generation": 5,
     "snapshotDigest": "sha256:282fb3eead874618dda3229320a3a5d061434ea3766c8c95c641e07d49444b10",
     "rows": 1566,
-    "equal": 874,
-    "differing": 4,
+    "equal": 878,
+    "differing": 0,
     "unsupported": 688,
     "kinds": {
       "facade": [20, 20, 0, 0],
-      "typed-model": [747, 57, 2, 688],
-      "raw-tree": [747, 745, 2, 0],
+      "typed-model": [747, 59, 0, 688],
+      "raw-tree": [747, 747, 0, 0],
       "rejection": [52, 52, 0, 0]
     },
     "unsupportedRows": {
@@ -1030,12 +1033,7 @@
         ]
       }
     },
-    "differingRows": {
-      "unicode-trailing-broken-bar.model": "refused at byte 1, the gem at byte 3",
-      "unicode-greek-broken-bar.model": "refused at byte 2, the gem at byte 4",
-      "unicode-trailing-broken-bar.raw": "refused at byte 2, the gem at byte 7",
-      "unicode-greek-broken-bar.raw": "refused at byte 8, the gem at byte 13"
-    }
+    "differingRows": {}
   },
   "mathml": {
     "commit": "9767c37a8d7bb21a0694780ecfcbc4f1fbd9eb39",

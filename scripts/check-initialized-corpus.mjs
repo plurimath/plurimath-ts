@@ -46,14 +46,22 @@ const generations = { asciimath: 3, latex: 3, unicode: 4, mathml: 2, omml: 2 };
 const expectedCounts = { asciimath: 160, latex: 125, unicode: 20, mathml: 287, omml: 190 };
 const sources = [];
 const cases = [];
-const currentQuotedText = parseYaml(
-  readFileSync(
-    join(root, "submodules/plurimath-testsuite/corpus/asciimath/quoted-text.yaml"),
-    "utf8",
-  ),
-);
-const currentUnitProfile = currentQuotedText.cases.find((row) => row.id === "text-unitsml-valid");
-if (!currentUnitProfile) throw new Error("missing current facade UnitsML source profile");
+// AsciiMath stage rows whose UnicodeMath output the pinned facade corpus has
+// since re-recorded. Ruby main's own replay expects these stage rows to
+// mismatch; the corpus row is the current output.
+const currentProfiles = {
+  "text-unitsml-valid": { file: "quoted-text.yaml", profile: "current-facade-quoted-unitsml" },
+  "colour-named": { file: "colour.yaml", profile: "current-facade-colour-name" },
+  "colour-in-sum": { file: "colour.yaml", profile: "current-facade-colour-name" },
+};
+for (const [id, entry] of Object.entries(currentProfiles)) {
+  const corpus = parseYaml(
+    readFileSync(join(root, "submodules/plurimath-testsuite/corpus/asciimath", entry.file), "utf8"),
+  );
+  const row = corpus.cases.find((candidate) => candidate.id === id);
+  if (!row) throw new Error(`missing current facade source profile ${id}`);
+  entry.unicodemath = row.expected.unicodemath;
+}
 
 function callOptions(call) {
   if (!call) return undefined;
@@ -122,17 +130,15 @@ for (const [format, generation] of Object.entries(generations)) {
           const historicalEqual = actual === expected;
           // Keep the old stage oracle immutable. The current facade corpus is
           // a separately named source profile; this is not normative promotion.
+          const current = format === "asciimath" ? currentProfiles[row.id] : undefined;
           const currentProfileEqual =
-            format === "asciimath" &&
-            row.id === "text-unitsml-valid" &&
-            name === "unicode" &&
-            actual === currentUnitProfile.expected.unicodemath;
+            current !== undefined && name === "unicode" && actual === current.unicodemath;
           result.writers.push({
             target: name,
             equal: historicalEqual || currentProfileEqual,
             historicalEqual,
             ...(currentProfileEqual && !historicalEqual
-              ? { profile: "current-facade-quoted-unitsml", historicalDifference: true }
+              ? { profile: current.profile, historicalDifference: true }
               : {}),
             ...(historicalEqual || currentProfileEqual ? {} : { actual, expected }),
           });

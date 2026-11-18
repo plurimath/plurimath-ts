@@ -370,6 +370,8 @@ interface TreeParsers {
   readonly preprocess: (input: string) => string;
   /** Preprocessed text -> grammar tree; throws `ParseFailed` at a preprocessed offset. */
   readonly grammar: (preprocessed: string, options: LocaleOptions) => ParseValue;
+  /** A preprocessed offset mapped back to the input, as `ParseError.index` is. */
+  readonly toInput?: (input: string, preprocessedIndex: number) => number;
 }
 
 /**
@@ -403,6 +405,7 @@ const TREE_PARSERS: Partial<Record<StageLanguage, TreeParsers>> = {
     tree: (input, options) => umathRawTree(parseUnicodemathTree(input, options)),
     preprocess: (input) => preprocessUnicodemath(input).text,
     grammar: parseUnicodemathPreprocessed,
+    toInput: (input, index) => preprocessUnicodemath(input).map.toOriginal(index),
   },
 };
 
@@ -416,6 +419,17 @@ const TREE_PARSERS: Partial<Record<StageLanguage, TreeParsers>> = {
 const RAW_REFUSAL_SPACE: Partial<Record<StageLanguage, "input" | "preprocessed">> = {
   unicode: "preprocessed",
 };
+
+/**
+ * Stages whose refusal offsets are the grammar's deepest failure position.
+ * umath writes the unicode rows (generation 5) and reports how far its
+ * grammar got: `a¦` (`a&#xa6;`) is refused at byte 7, the end of the input,
+ * where `atop` still wanted a denominator. The port's `ParseError.index`
+ * keeps the Parslet cause leaf the Plurimath facade reports (index 2 in the
+ * facade's own rejection rows), so these rows read the deepest position the
+ * grammar recorded (`ParseFailed.furthest`) instead.
+ */
+const DEEPEST_REFUSAL: ReadonlySet<StageLanguage> = new Set<StageLanguage>(["unicode"]);
 
 /**
  * Where the port refuses, in the text the row counts in. The port's
@@ -433,12 +447,18 @@ function refusalOffset(
   thrown: ParseError,
 ): number {
   const parsers = TREE_PARSERS[language];
-  if (space === "preprocessed" && parsers !== undefined) {
+  const deepest = DEEPEST_REFUSAL.has(language);
+  if ((space === "preprocessed" || deepest) && parsers !== undefined) {
     const preprocessed = attempt(() => parsers.preprocess(input));
     if (preprocessed.thrown === undefined) {
       const text = preprocessed.value as string;
       const grammar = attempt(() => parsers.grammar(text, options));
-      if (grammar.thrown instanceof ParseFailed) return byteOffset(text, grammar.thrown.index);
+      if (grammar.thrown instanceof ParseFailed) {
+        const at = deepest ? grammar.thrown.furthest : grammar.thrown.index;
+        if (space === "preprocessed") return byteOffset(text, at);
+        const toInput = parsers.toInput;
+        if (toInput !== undefined) return byteOffset(input, toInput(input, at));
+      }
     }
   }
   return byteOffset(input, thrown.index);

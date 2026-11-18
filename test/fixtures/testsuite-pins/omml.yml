@@ -7,7 +7,7 @@
 ---
 schema: plurimath-stage/pin/1
 repository: https://github.com/plurimath/plurimath-testsuite
-commit: 85c7be8fd56f0cc64b4869e74716acc4f0dbe746
+commit: 9767c37a8d7bb21a0694780ecfcbc4f1fbd9eb39
 language: omml
 generation: 2
 snapshot_digest: sha256:1d8307a72fa48acfae8fd3e5f5bebecb941e02282aa265f3e9c168b96761d439

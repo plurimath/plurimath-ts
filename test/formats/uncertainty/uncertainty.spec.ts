@@ -57,6 +57,17 @@ const RENDERERS: Readonly<Record<string, (node: MathNode) => string>> = {
   html: (node) => toHtml(node),
 };
 
+// Renderings where this payload's oracle (plurimath main) has moved past the
+// oracle of the port's html tables (0.11.17, scripts/ci/oracle/Gemfile.lock).
+// Main's `Core#html_base` writes an upright (FontStyle::Normal) script base
+// without `<i>`, which a unit's `s` in `s^-1` is; 0.11.17 and this port italicize
+// it. The rows are expected to differ until the html oracle moves to main, and
+// `it.fails` reports the moment they stop differing.
+const ORACLE_AHEAD: Readonly<Record<string, readonly string[]>> = {
+  'ustd(1, 0.5, "unitsml(m*s^-1)")': ["html"],
+  '"ustd(1, 0.5, "unitsml(m*s^-1)")"': ["html"],
+};
+
 describe("uncertainty fixtures", () => {
   it("come from an oracle with the uncertainty node", () => {
     expect(fixture.oracle.version >= "0.11.13").toBe(true);
@@ -76,7 +87,8 @@ describe("uncertainty fixtures", () => {
         expect(normalize(parseAsciimath(row.input))).toStrictEqual(row.model);
       });
       for (const [format, expected] of Object.entries(row.render ?? {})) {
-        it(`renders ${format}`, () => {
+        const ahead = ORACLE_AHEAD[row.input]?.includes(format) === true;
+        (ahead ? it.fails : it)(`renders ${format}`, () => {
           const formula = parseAsciimath(row.input);
           const render = RENDERERS[format];
           if (render === undefined) throw new Error(`no renderer for ${format}`);

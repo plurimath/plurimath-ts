@@ -393,8 +393,8 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- amath 0.1 `uncertainty` (plurimath#493) ---------------------------------------
-  // ustd(y, u) / ustd(y(d)) / uexp(y, U, k[, p]) / ucov(y, lo, hi, p[, kind]),
+  // --- amath 0.2 `uncertainty` (plurimath#493, amath#17) -----------------------------
+  // "ustd(y, u)" / "ustd(y(d))" / "uexp(y, U, k[, p])" / "ucov(y, lo, hi, p[, kind])",
   // each with an optional last "unitsml(...)" argument; the tree contract is
   // plurimath's docs/uncertainty-asciimath-tree.md. The oracle's AsciiMath
   // grammar is amath, which tries `uncertainty` first in
@@ -462,8 +462,11 @@ export function createAsciimathGrammar(
       uncClose,
     ),
   );
+  // amath#17: the call rides asciimath's own string literal, `"ustd(1, 2)"`.
+  // A bareword `ustd(1, 2)` reads as letters, and a quoted string that is not
+  // a well-formed uncertainty form falls through to quoted text.
   const uncertainty = rule(() =>
-    alt(uncertaintyStd, uncertaintyExp, uncertaintyCov).as("uncertainty"),
+    seq(str('"'), alt(uncertaintyStd, uncertaintyExp, uncertaintyCov), str('"')).as("uncertainty"),
   );
 
   // --- asciimath/parse.rb:81-92 ------------------------------------------------------

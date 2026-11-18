@@ -303,7 +303,7 @@ jobs:
     # A literal, as in the gems' corpus.yml, so this file fixes the commit; a
     # step checks it against every pin and against the submodule gitlink.
     env:
-      TESTSUITE_COMMIT: 85c7be8fd56f0cc64b4869e74716acc4f0dbe746
+      TESTSUITE_COMMIT: 9767c37a8d7bb21a0694780ecfcbc4f1fbd9eb39
       TESTSUITE: submodules/plurimath-testsuite
       PINS: test/fixtures/testsuite-pins
     steps:

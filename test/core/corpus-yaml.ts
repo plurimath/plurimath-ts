@@ -35,12 +35,15 @@ const KEY_PATTERN = /^([^\s].*?):(?:[ \t]+(.*))?$/;
 export function parseYaml(text: string): YamlValue {
   const lines = text.split("\n");
   const state: State = { lines, index: 0 };
-  // Skip the header comments and the document start marker.
+  // Skip the header comments and blank lines, then the optional document
+  // start marker. Psych writes the marker, but later stage generations of the
+  // testsuite are written without it, and the marker is optional in YAML.
   while (state.index < lines.length) {
     const line = lines[state.index] ?? "";
+    if (line.trim() !== "" && !line.startsWith("#")) break;
     state.index += 1;
-    if (line === "---") break;
   }
+  if (lines[state.index] === "---") state.index += 1;
   skipBlank(state);
   if (state.index >= lines.length) return null;
   const value = parseValue(state, indentOf(lines[state.index] ?? ""));

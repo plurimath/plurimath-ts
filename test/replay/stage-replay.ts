@@ -372,6 +372,22 @@ interface TreeParsers {
   readonly grammar: (preprocessed: string, options: LocaleOptions) => ParseValue;
 }
 
+/**
+ * A unicode raw-tree row is umath's own tree. An equation label (`x#(1)`) is
+ * split off by the preprocessor and wrapped around that tree afterwards by
+ * plurimath's `Parser#post_processing` (`{labeled_tr_value:, labeled_tr_id:}`),
+ * which is not part of umath, so the row is compared without the wrap.
+ */
+function umathRawTree(tree: ParseValue): ParseValue {
+  if (tree !== null && typeof tree === "object" && !Array.isArray(tree)) {
+    const wrapped = tree as { readonly [key: string]: ParseValue };
+    if ("labeled_tr_value" in wrapped && "labeled_tr_id" in wrapped) {
+      return wrapped.labeled_tr_value as ParseValue;
+    }
+  }
+  return tree;
+}
+
 const TREE_PARSERS: Partial<Record<StageLanguage, TreeParsers>> = {
   asciimath: {
     tree: parseAsciimathTree,
@@ -384,7 +400,7 @@ const TREE_PARSERS: Partial<Record<StageLanguage, TreeParsers>> = {
     grammar: parseLatexPreprocessed,
   },
   unicode: {
-    tree: parseUnicodemathTree,
+    tree: (input, options) => umathRawTree(parseUnicodemathTree(input, options)),
     preprocess: (input) => preprocessUnicodemath(input).text,
     grammar: parseUnicodemathPreprocessed,
   },
@@ -606,8 +622,29 @@ function replayStage(language: StageLanguage, payload: StagePayload): RowResult[
 
 const STAGE_SCHEMA = /^plurimath-stage\/(?:[a-z]+\/cases\/1|roundtrip\/1)$/;
 
+/**
+ * Append-only supersessions (the text-unitsml-valid-r2 pattern; plurimath
+ * scripts/replay_stage_roundtrips.rb does the same): a row whose id has an
+ * -r2 sibling is kept in the generation for history and superseded by that
+ * sibling, so it is not compared.
+ */
+export const SUPERSEDED = "superseded by its -r2 sibling, which is replayed instead";
+
+function classifySupersessions(results: RowResult[]): RowResult[] {
+  const superseded = new Set(
+    results.filter((row) => row.id.includes("-r2")).map((row) => row.id.replace("-r2", "")),
+  );
+  return results.map((row) =>
+    superseded.has(row.id) ? { ...row, status: "unsupported", note: SUPERSEDED } : row,
+  );
+}
+
 /** Every row of the generation, in payload then file order. */
 export function replayGeneration(generation: StageGeneration): RowResult[] {
+  return classifySupersessions(replayRows(generation));
+}
+
+function replayRows(generation: StageGeneration): RowResult[] {
   const language = generation.pin.language;
   return generation.payloads.flatMap((payload) => {
     if (STAGE_SCHEMA.test(payload.schema)) return replayStage(language, payload);

@@ -23,7 +23,6 @@ import { type FormulaNode, ParseError } from "../../core/index";
 import { ParseFailed, type ParseValue, type SourceMap } from "../../pegkit/index";
 import {
   type AsciimathParseOptions,
-  ambiguousUncertaintyComma,
   transformAsciimathTree,
   validateOptions,
 } from "./consumer";
@@ -52,7 +51,6 @@ export function parseAsciimathTree(
 export function parseAsciimath(input: string, options?: AsciimathParseOptions | null): FormulaNode {
   validateOptions(options);
   const { text, map } = preprocess(input);
-  ambiguousUncertaintyComma(input, text, options);
   const tree = parsePreprocessed(input, text, map, options);
   return transformAsciimathTree(tree, input);
 }

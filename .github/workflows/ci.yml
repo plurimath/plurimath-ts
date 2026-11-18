@@ -72,8 +72,8 @@ jobs:
 
       - uses: actions/checkout@v5
         with:
-          repository: suleman-uzair/amath-ts
-          ref: 061b19b5cc3aef4458e7bb770dc018beebf4fe87
+          repository: unitsml/amath-ts
+          ref: 876d2ae294fad6f8039e6761b81ce862cb019c35
           path: .stage-deps/amath
       - name: Build pinned amath stage
         run: |
@@ -141,8 +141,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/checkout@v5
         with:
-          repository: suleman-uzair/amath-ts
-          ref: 061b19b5cc3aef4458e7bb770dc018beebf4fe87
+          repository: unitsml/amath-ts
+          ref: 876d2ae294fad6f8039e6761b81ce862cb019c35
           path: .stage-deps/amath
       - uses: actions/checkout@v5
         with:

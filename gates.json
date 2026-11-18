@@ -67,12 +67,11 @@
       "id": "corpus-conformance",
       "class": "A",
       "activatesAt": "P1-baseline",
-      "run": "pnpm test corpus- model-parity render-parity degenerate-slots asciimath/grammar",
+      "run": "pnpm test corpus- model-parity render-parity degenerate-slots",
       "selects": [
         "test/core/corpus-pin.spec.ts",
         "test/core/corpus-yaml.spec.ts",
         "test/gates/corpus-discovery.spec.ts",
-        "test/formats/asciimath/grammar.spec.ts",
         "test/formats/asciimath/model-parity.spec.ts",
         "test/formats/asciimath/render-parity.spec.ts",
         "test/formats/html/degenerate-slots.spec.ts",

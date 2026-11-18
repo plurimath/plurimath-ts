@@ -70,7 +70,7 @@
  * raises a `Parslet::ParseFailed` whose cause is amath's position: the deepest
  * leaf of the failure cause a Parslet `Tree` reporter builds
  * (`Amath::ErrorPosition`), as a character offset into the preprocessed text.
- * pegkit's `ParseFailed.index` is the same quantity on this port's grammar, and
+ * amath-ts's `charOffset` is the same quantity on this port's stage, and
  * on all 26 rejections below it equals amath's offset at plurimath 2967dcc4.
  *
  * `ParseError.index` is that offset mapped back to the ORIGINAL input:
@@ -87,13 +87,26 @@
 
 import { describe, expect, it } from "vitest";
 import { ParseError } from "../../../src/core/errors";
-import { createAsciimathGrammar } from "../../../src/formats/asciimath/grammar";
 import { parseAsciimathTree } from "../../../src/formats/asciimath/parser";
 import { preprocess } from "../../../src/formats/asciimath/preprocess";
-import { ParseFailed, type ParseValue, Slice } from "../../../src/pegkit/index";
+import { asciimathStage } from "../../../src/formats/asciimath/stage";
+import { type ParseValue, Slice } from "../../../src/pegkit/index";
 import type { YamlValue } from "../../core/corpus-yaml";
 
-const grammar = createAsciimathGrammar();
+/**
+ * The stage's refusal of already-preprocessed text, as a UTF-16 offset:
+ * amath-ts counts characters (code points), `ParseError.index` code units.
+ */
+function stageFailure(preprocessed: string): number | null {
+  try {
+    asciimathStage().parseTree(preprocessed);
+    return null;
+  } catch (error) {
+    const at = (error as { charOffset?: unknown }).charOffset;
+    if (typeof at !== "number") throw error;
+    return [...preprocessed].slice(0, at).join("").length;
+  }
+}
 
 /**
  * Control characters and the no-break space as code points, never as literal
@@ -907,14 +920,9 @@ describe("failure positions index the original input", () => {
       const input = inputFor(id);
 
       // The root's failure position, into the preprocessed text.
-      let failed: unknown;
-      try {
-        grammar.root.parse(preprocessed);
-      } catch (error) {
-        failed = error;
-      }
-      expect(failed, `${id} was accepted`).toBeInstanceOf(ParseFailed);
-      expect((failed as ParseFailed).index, `${id} preprocessed offset`).toBe(preprocessedIndex);
+      const failed = stageFailure(preprocessed);
+      expect(failed, `${id} was accepted`).not.toBeNull();
+      expect(failed, `${id} preprocessed offset`).toBe(preprocessedIndex);
 
       // The public failure after the SourceMap, which is what a caller sees.
       const error = rejectionOf(input) as ParseError;

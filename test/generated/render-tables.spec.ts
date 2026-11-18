@@ -25,7 +25,6 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { ASCIIMATH_TABLE_PARENTHESIS } from "../../src/generated/asciimath/grammar";
 import {
   ASCIIMATH_FONT_STYLE_KEYWORDS,
   ASCIIMATH_SIMPLE_TABLE_NAMES,
@@ -73,16 +72,6 @@ describe("the table close-paren fallback", () => {
       ["[", "]"],
       ["(", ")"],
     ]);
-  });
-
-  it("agrees with the grammar's reading of the same constant", () => {
-    // `Asciimath::Constants::TABLE_PARENTHESIS` is read twice: parse-side by
-    // `open_table`/`close_table` (grammar.ts) and render-side by the nil-close
-    // fallback (this file). Both slices are generated from the one constant,
-    // so they must never disagree.
-    expect([...ASCIIMATH_TABLE_CLOSE_FALLBACK]).toEqual(
-      ASCIIMATH_TABLE_PARENTHESIS.map((pair) => [...pair]),
-    );
   });
 });
 

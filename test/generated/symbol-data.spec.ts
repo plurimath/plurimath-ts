@@ -15,9 +15,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ASCIIMATH_INPUT_COLLISIONS,
-  ASCIIMATH_LITERALS,
   ASCIIMATH_PAREN_INPUTS,
-  ASCIIMATH_SKIP_INPUT_PARENS,
   ASCIIMATH_SYMBOL_INPUT,
 } from "../../src/generated/asciimath/input";
 import { ASCIIMATH_SYMBOLS } from "../../src/generated/asciimath/symbols";
@@ -86,20 +84,6 @@ describe("asciimath input tables", () => {
     }
   });
 
-  it("stay longest-first, which is what makes the ordered choice correct", () => {
-    let previous = Number.POSITIVE_INFINITY;
-    for (const literal of ASCIIMATH_LITERALS.keys()) {
-      expect(literal.length).toBeLessThanOrEqual(previous);
-      previous = literal.length;
-    }
-  });
-
-  it("keep the structurally matched parens out of the literal list", () => {
-    for (const paren of ASCIIMATH_SKIP_INPUT_PARENS) {
-      expect(ASCIIMATH_LITERALS.has(paren), paren).toBe(false);
-    }
-  });
-
   it("mark paren inputs, and let the paren table win every collision", () => {
     for (const input of ASCIIMATH_PAREN_INPUTS) {
       expect(ASCIIMATH_SYMBOL_INPUT.get(input)?.startsWith("Paren::"), input).toBe(true);
@@ -110,13 +94,9 @@ describe("asciimath input tables", () => {
     }
   });
 
-  it("cover the symbols the AsciiMath grammar dispatches on", () => {
+  it("cover the symbols the AsciiMath transform resolves", () => {
     expect(ASCIIMATH_SYMBOL_INPUT.get("sigma")).toBe("Sigma");
     expect(ASCIIMATH_SYMBOL_INPUT.get("(")).toBe("Paren::Lround");
-    expect(ASCIIMATH_LITERALS.get("sqrt")).toBe("unary_class");
-    expect(ASCIIMATH_LITERALS.get("sigma")).toBe("symbol");
-    expect(ASCIIMATH_LITERALS.get("bb")).toBe("fonts");
-    expect(ASCIIMATH_LITERALS.get("ZZ")).toBe("special_fonts");
   });
 });
 

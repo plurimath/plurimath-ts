@@ -29,8 +29,9 @@
  *     `expected.tree` and `expected.preprocessed`. A refusal must be a
  *     `ParseError` at the recorded byte offset;
  *   - stage typed-model rows: a refusal must be a `ParseError` from the
- *     port's parser at the recorded byte offset. A model is unsupported: it is
- *     the stage gem's own typed model, which the port does not build;
+ *     port's parser at the recorded byte offset. An AsciiMath model must be
+ *     amath-ts's typed model, field for field; other stages' models are
+ *     unsupported: they are the stage gems' own typed models;
  *   - stage model-roundtrip rows (mathml, omml): a refusal must be a
  *     `ParseError`. A model and its `to_xml` bytes are unsupported: they are
  *     the `mml`/`omml` gems' lutaml models and serializers;
@@ -40,13 +41,14 @@
  *     (`nodeEquals` between the formula read back and the one parsed).
  */
 
+import { type Decimal, Model } from "@plurimath/amath-ts/browser";
 import type { FormulaNode, MathNode } from "../../src/core/index";
 import { ParseError } from "../../src/core/index";
 import { nodeEquals } from "../../src/core/nodes";
-import { parseAsciimathPreprocessed } from "../../src/formats/asciimath/grammar";
 import { toAsciimath } from "../../src/formats/asciimath/index";
 import { parseAsciimathTree } from "../../src/formats/asciimath/parser";
 import { preprocess as preprocessAsciimath } from "../../src/formats/asciimath/preprocess";
+import { asciimathStage } from "../../src/formats/asciimath/stage";
 import { toHtml } from "../../src/formats/html/index";
 import { parseLatexPreprocessed } from "../../src/formats/latex/grammar";
 import { toLatex } from "../../src/formats/latex/index";
@@ -110,9 +112,6 @@ const unsupported = (note: string): Outcome => ({ status: "unsupported", note })
  * its model, and a port that grows one, both show up as a changed reason.
  */
 export const UNSUPPORTED_REASONS = {
-  asciimathTypedModel:
-    "typed-model: the row is Amath.parse's own typed model (Amath::Document); " +
-    "plurimath-ts parses AsciiMath straight into the Plurimath Math::Core model and builds no Amath model",
   latexTypedModel:
     "typed-model: the row is Latexmath.parse's own typed model (Latexmath::Model::Document); " +
     "plurimath-ts parses LaTeX straight into the Plurimath Math::Core model and builds no Latexmath model",
@@ -128,7 +127,6 @@ export const UNSUPPORTED_REASONS = {
 } as const;
 
 const TYPED_MODEL_REASON: Partial<Record<StageLanguage, string>> = {
-  asciimath: UNSUPPORTED_REASONS.asciimathTypedModel,
   latex: UNSUPPORTED_REASONS.latexTypedModel,
   unicode: UNSUPPORTED_REASONS.unicodeTypedModel,
 };
@@ -368,8 +366,12 @@ interface TreeParsers {
   /** Input -> grammar tree, offsets mapped to the input on refusal. */
   readonly tree: (input: string, options: LocaleOptions) => ParseValue;
   readonly preprocess: (input: string) => string;
-  /** Preprocessed text -> grammar tree; throws `ParseFailed` at a preprocessed offset. */
-  readonly grammar: (preprocessed: string, options: LocaleOptions) => ParseValue;
+  /**
+   * Preprocessed text -> grammar tree; throws `ParseFailed` at a preprocessed
+   * offset. Absent for a stage-backed language, whose refusals already count
+   * in the caller's input.
+   */
+  readonly grammar?: (preprocessed: string, options: LocaleOptions) => ParseValue;
   /** A preprocessed offset mapped back to the input, as `ParseError.index` is. */
   readonly toInput?: (input: string, preprocessedIndex: number) => number;
 }
@@ -394,7 +396,6 @@ const TREE_PARSERS: Partial<Record<StageLanguage, TreeParsers>> = {
   asciimath: {
     tree: parseAsciimathTree,
     preprocess: (input) => preprocessAsciimath(input).text,
-    grammar: parseAsciimathPreprocessed,
   },
   latex: {
     tree: parseLatexTree,
@@ -448,11 +449,12 @@ function refusalOffset(
 ): number {
   const parsers = TREE_PARSERS[language];
   const deepest = DEEPEST_REFUSAL.has(language);
-  if ((space === "preprocessed" || deepest) && parsers !== undefined) {
+  const grammarOf = parsers?.grammar;
+  if ((space === "preprocessed" || deepest) && parsers !== undefined && grammarOf !== undefined) {
     const preprocessed = attempt(() => parsers.preprocess(input));
     if (preprocessed.thrown === undefined) {
       const text = preprocessed.value as string;
-      const grammar = attempt(() => parsers.grammar(text, options));
+      const grammar = attempt(() => grammarOf(text, options));
       if (grammar.thrown instanceof ParseFailed) {
         const at = deepest ? grammar.thrown.furthest : grammar.thrown.index;
         if (space === "preprocessed") return byteOffset(text, at);
@@ -515,11 +517,46 @@ function replayRawTree(language: StageLanguage, entry: Mapping): Outcome {
   return notes.length === 0 ? EQUAL : differ(notes.join("; "));
 }
 
+/**
+ * amath-ts's typed model in the payload's tree form (amath-ts
+ * `test/runtime.test.mjs` `modelTree`): each object is its model class with
+ * its set fields in declaration order, nil and absent fields left out.
+ */
+function amathModelTree(value: unknown): YamlValue {
+  if (Array.isArray(value)) return { array: value.map(amathModelTree) };
+  if (typeof value === "string") return { str: value };
+  if (value === null) return { nil: true };
+  const model = value as { readonly [key: string]: unknown };
+  const type = (value as { constructor: { modelId: string; memberNames: readonly string[] } })
+    .constructor;
+  return {
+    node: type.modelId.split("@")[0] ?? type.modelId,
+    fields: type.memberNames
+      .filter((key) => model[key] !== Model.ABSENT && model[key] !== null)
+      .map((key) => [key, amathModelTree(model[key])]),
+  };
+}
+
+/** Stages whose own typed model the port builds through the stage package. */
+const TYPED_MODELS: Partial<Record<StageLanguage, (input: string, options: Mapping) => YamlValue>> =
+  {
+    asciimath: (input, options) =>
+      amathModelTree(asciimathStage().parse(input, { decimal: options.decimal as Decimal })),
+  };
+
 function replayTypedModel(language: StageLanguage, entry: Mapping): Outcome {
   const expected = asMapping(entry.expected, "expected");
   const input = taggedString(entry.input, "input");
   if (expected.refusal === undefined) {
-    return unsupported(TYPED_MODEL_REASON[language] ?? `typed-model rows for ${language}`);
+    const build = TYPED_MODELS[language];
+    if (build === undefined) {
+      return unsupported(TYPED_MODEL_REASON[language] ?? `typed-model rows for ${language}`);
+    }
+    const run = attempt(() => build(input, asMapping(entry.options ?? {}, "options")));
+    if (run.thrown !== undefined) return differ(`the stage refuses it: ${message(run.thrown)}`);
+    return canonical(run.value as YamlValue) === canonical(expected.tree ?? null)
+      ? EQUAL
+      : differ("typed model differs");
   }
   const options = rowOptions(entry.options);
   if (typeof options === "string") return unsupported(`typed-model refusal with ${options}`);

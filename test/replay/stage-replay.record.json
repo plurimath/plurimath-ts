@@ -4,12 +4,12 @@
     "generation": 5,
     "snapshotDigest": "sha256:d3ee5a267373c235e555f2c0d01ae72e730ea2648113adcf7b0c87238b0ff63b",
     "rows": 214,
-    "equal": 181,
+    "equal": 191,
     "differing": 2,
-    "unsupported": 31,
+    "unsupported": 21,
     "kinds": {
       "facade": [93, 90, 2, 1],
-      "typed-model": [20, 0, 0, 20],
+      "typed-model": [20, 10, 0, 10],
       "calls": [68, 68, 0, 0],
       "rejection": [13, 13, 0, 0],
       "raw-tree": [20, 10, 0, 10]
@@ -39,21 +39,6 @@
           "uncertainty-shared-exponent.expanded.dimensionless_fields",
           "uncertainty-shared-exponent.expanded.negative_exponent",
           "uncertainty-shared-exponent.interval.shared_exponent"
-        ]
-      },
-      "typed-model: the row is Amath.parse's own typed model (Amath::Document); plurimath-ts parses AsciiMath straight into the Plurimath Math::Core model and builds no Amath model": {
-        "count": 10,
-        "ids": [
-          "uncertainty-shared-exponent.standard.positive-r2.model",
-          "uncertainty-shared-exponent.standard.negative-r2.model",
-          "uncertainty-shared-exponent.standard.leading_zeroes-r2.model",
-          "uncertainty-shared-exponent.standard.zero_exponent-r2.model",
-          "uncertainty-shared-exponent.concise.negative_exponent-r2.model",
-          "uncertainty-shared-exponent.concise.zero_exponent-r2.model",
-          "uncertainty-shared-exponent.concise.unit-r2.model",
-          "uncertainty-shared-exponent.expanded.dimensionless_fields-r2.model",
-          "uncertainty-shared-exponent.expanded.negative_exponent-r2.model",
-          "uncertainty-shared-exponent.interval.shared_exponent-r2.model"
         ]
       }
     },

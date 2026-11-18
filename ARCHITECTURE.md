@@ -62,8 +62,13 @@ PARG/WASM parser, like the existing Leptris XML entries. The stage owns its
 artifact, engine, capture normalization and byte offsets. The consumer owns
 preprocessing, locale validation, original-input diagnostics, the Formula
 mapper and writers. Importing this entry does not initialize WASM or select
-a fallback grammar. The default parsers remain until every replacement has
-passed its complete compatibility boundary.
+a fallback grammar.
+
+The default AsciiMath parser is that same stage: `parseAsciimath` builds an
+amath-ts parser on first use, one parsanol runtime per decimal marker, as
+Ruby's `Asciimath::Parser` does through `Amath.parse_model` since plurimath
+8898451d. The handwritten AsciiMath grammar is gone. The other default parsers
+remain until their replacements pass their compatibility boundaries.
 
 ## 1. Contract
 

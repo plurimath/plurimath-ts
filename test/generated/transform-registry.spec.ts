@@ -23,12 +23,6 @@
 import { describe, expect, it } from "vitest";
 import { NODE_SPECS } from "../../src/core/normalize";
 import {
-  ASCIIMATH_BINARY_CLASSES,
-  ASCIIMATH_SUB_SUP_CLASSES,
-  ASCIIMATH_TERNARY_CLASSES,
-} from "../../src/generated/asciimath/grammar";
-import { ASCIIMATH_LITERALS } from "../../src/generated/asciimath/input";
-import {
   ASCIIMATH_TRANSFORM_EXCLUDED,
   ASCIIMATH_TRANSFORM_FONT_STYLES,
   ASCIIMATH_TRANSFORM_GET_CLASS,
@@ -279,50 +273,8 @@ describe("agreement with the node model", () => {
   });
 });
 
-describe("agreement with the sibling grammar tables", () => {
+describe("agreement with the Utility tables", () => {
   const getClass = byName(ASCIIMATH_TRANSFORM_GET_CLASS);
-
-  it("covers exactly the binary and ternary grammar keywords", () => {
-    const binary = [...ASCIIMATH_BINARY_CLASSES, ...ASCIIMATH_SUB_SUP_CLASSES];
-    for (const name of binary) {
-      expect(getClass.get(name)?.sources, name).toContain("binary_class");
-    }
-    for (const name of ASCIIMATH_TERNARY_CLASSES) {
-      expect(getClass.get(name)?.sources, name).toContain("ternary_class");
-    }
-    expect(entriesWithSource(ASCIIMATH_TRANSFORM_GET_CLASS, "binary_class").length).toBe(
-      binary.length,
-    );
-    expect(entriesWithSource(ASCIIMATH_TRANSFORM_GET_CLASS, "ternary_class").length).toBe(
-      ASCIIMATH_TERNARY_CLASSES.length,
-    );
-  });
-
-  it("covers exactly the unary_class literals the grammar dispatches on", () => {
-    const unaryLiterals = [...ASCIIMATH_LITERALS]
-      .filter(([, kind]) => kind === "unary_class")
-      .map(([text]) => text);
-    expect(unaryLiterals.length).toBe(44);
-    for (const name of unaryLiterals) {
-      expect(getClass.get(name)?.sources, name).toContain("unary_class");
-    }
-    expect(entriesWithSource(ASCIIMATH_TRANSFORM_GET_CLASS, "unary_class").length).toBe(
-      unaryLiterals.length,
-    );
-  });
-
-  it("serves every font key the grammar can capture", () => {
-    // The transform indexes FONT_STYLES with the captured `fonts_class` text,
-    // so a fonts literal missing from the table would be a nil-index crash.
-    const fontNames = new Set(ASCIIMATH_TRANSFORM_FONT_STYLES.map((entry) => entry.name));
-    const fontLiterals = [...ASCIIMATH_LITERALS]
-      .filter(([, kind]) => kind === "fonts")
-      .map(([text]) => text);
-    expect(fontLiterals.length).toBe(14);
-    for (const name of fontLiterals) {
-      expect(fontNames.has(name), name).toBe(true);
-    }
-  });
 
   it("hears every Utility membership name as a get_class entry", () => {
     for (const name of ASCIIMATH_TRANSFORM_UNARY_CLASSES) {

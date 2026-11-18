@@ -282,12 +282,7 @@ const FORBIDDEN = {
     LOCALE_GROUPS,
     /formats\/unicodemath\/grammar\.ts$/,
   ],
-  "./asciimath/amath": [
-    ...forbidOtherFormats("asciimath"),
-    /xml\//,
-    LOCALE_GROUPS,
-    /formats\/asciimath\/grammar\.ts$/,
-  ],
+  "./asciimath/amath": [...forbidOtherFormats("asciimath"), /xml\//, LOCALE_GROUPS],
   // HTML parses as well as renders, so pegkit is expected here; `xml` still
   // is not, because the HTML renderer builds its markup as strings rather
   // than through the XML layer.

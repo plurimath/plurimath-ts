@@ -30,7 +30,10 @@ await leptris.init();
 const parsers = {
   asciimath: createAsciimathParser(await amath.initialize()),
   latex: createLatexParser(await latexmath.initialize()),
-  unicode: createUnicodemathParser(await umath.initialize()),
+  unicode: createUnicodemathParser(
+    await umath.initialize(),
+    readFileSync(new URL("../artifacts/umath.json", pathToFileURL(resolve(entries[2]))), "utf8"),
+  ),
   mathml: createMathmlParser(leptris),
   omml: createOmmlParser(leptris),
 };
@@ -42,7 +45,7 @@ const writers = {
   omml: toOmml,
   html: toHtml,
 };
-const generations = { asciimath: 3, latex: 3, unicode: 4, mathml: 2, omml: 2 };
+const generations = { asciimath: 3, latex: 4, unicode: 4, mathml: 2, omml: 2 };
 const expectedCounts = { asciimath: 160, latex: 125, unicode: 20, mathml: 287, omml: 190 };
 const sources = [];
 const cases = [];

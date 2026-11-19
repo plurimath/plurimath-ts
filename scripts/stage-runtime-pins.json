@@ -5,10 +5,10 @@
   },
   "latexmath": {
     "repository": "plurimath/latexmath-ts",
-    "revision": "4d0356160502c604c26148f85518faa6d67b0602"
+    "revision": "25537f4a2c09b522340d23804704fe99e4a94ecc"
   },
   "umath": {
     "repository": "plurimath/umath-ts",
-    "revision": "6ff33b54fc9e72c445d8efa626ba2ae17bc8c9ec"
+    "revision": "787840cc71a1e31ac6a2df6873b9dacad4b39241"
   }
 }

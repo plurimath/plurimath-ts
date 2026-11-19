@@ -118,6 +118,10 @@ module OracleArtifacts
         jobs << [script, "generate-#{script}.rb", ["--oracle", @oracle, "--out", at.call(dir)]]
       end
       jobs << ["render-sweeps", "generate-render-sweeps.rb", ["--oracle", @oracle, "--out", at.call("test/formats")]]
+      %w[html unicodemath to-display].each do |name|
+        jobs << ["battery-#{name}", "battery-#{name}-fixtures.rb",
+                 ["--oracle", @oracle, "--out", at.call("test/compat")]]
+      end
       jobs
     end
 
@@ -138,7 +142,8 @@ module OracleArtifacts
       # The root evaluation profile is an immutable historical reference.
       historical = %w[test/formats/evaluation/evaluation-fixtures.json
         test/formats/evaluation/evaluation-fixtures.manifest.yaml]
-      ((roots + fixture_paths + sweeps).uniq - historical).sort
+      compat = %w[html-battery unicodemath-battery to-display].map { |name| "test/compat/#{name}-fixtures.json" }
+      ((roots + fixture_paths + sweeps + compat).uniq - historical).sort
     end
 
     def omitted_family_paths
@@ -146,6 +151,7 @@ module OracleArtifacts
         path.match?(%r{\Asrc/formats/(?:html|unicodemath)/generated/(?:parser-tables|transform-tables|provenance)\.ts\z}) ||
           path.start_with?("src/formats/html/generated-text/", "src/formats/mathml/generated-recognition/") ||
           path.match?(%r{\Atest/formats/(?:asciimath|latex|mathml)/render-sweep\.json\z}) ||
+          path.start_with?("test/compat/") ||
           path.match?(%r{\Atest/.*(?:cli-fixtures|evaluation-fixtures|render-options-fixtures|render-kinds-fixtures|ox-contract\.expected)\.(?:json|manifest\.yaml)\z})
       end
     end
@@ -325,7 +331,7 @@ module OracleArtifacts
       # only its omissions here, avoiding a third pass over the full corpus.
       second = File.join(@out, "second-generated")
       omitted_names = %w[render-sweeps html-parser-data unicodemath-parser-data html-text-data mathml-recognition-data
-                         cli-fixtures evaluation-fixtures render-options-fixtures xml-fixtures]
+                         cli-fixtures evaluation-fixtures render-options-fixtures xml-fixtures battery-html battery-unicodemath battery-to-display]
       omitted_paths = omitted_family_paths
       raise "empty omitted-family inventory" if omitted_paths.empty?
       deterministic = false

@@ -1,17 +1,17 @@
 {
   "generator": "scripts/generate-mathml-recognition-data.rb",
   "generatorSha256": "187449f44ee27b79186b6a05fc90d8f74f2ec928a6a8edadf44e8d17a07206e5",
-  "oracleCommit": "2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256",
-  "oracleVersion": "0.11.17",
+  "oracleCommit": "1a3033d0881d6c6ba655ab3ce00e0dc3cccfe5b4",
+  "oracleVersion": "0.11.20",
   "oracleSourceSha256": {
-    "lib/plurimath/math.rb": "2f783d3c4c4c15f95503d1226b94f52b88739cc2113464a6fcbdaf7f68006742",
-    "lib/plurimath/mathml/parser.rb": "f9c371f89dfea696a4dd1a76eaf6bf190da9bc906b1365770a7d9579f767aa67",
-    "lib/plurimath/mathml/translator.rb": "86c28f7890c92b47801e9f9c142c528bf65ca3832a3eb2e2ff2a80ccf11ceddf",
+    "lib/plurimath/math.rb": "7b0ec0d3906957b4c300030f0e24a7e89a034fca355c566540d252d4fdf94827",
+    "lib/plurimath/mathml/parser.rb": "0864d8321bd0a195a5e8357fcb884a03cb0bcdc02e9b7bb7f712e47a4de423a9",
+    "lib/plurimath/mathml/translator.rb": "883a02573b8e807bc222b4157779e937fc4eb83a8856f30ac6c1f1e8787ddd78",
     "lib/plurimath/mathml/formula_transformation.rb": "cdc54dd0b643cc3ddefe12de12757f671e1b02523d3ae3c81093131ec567ae3b"
   },
-  "mmlVersion": "2.4.7",
+  "mmlVersion": "2.4.8",
   "mmlSourceSha256": {
-    "lib/mml.rb": "a076384aa48164f77827cb1cf9352d2902a115d9e626a65745b460652c33d165",
+    "lib/mml.rb": "3329a35efd2489858ec4134ba0e8769df91fae49984025b57fcf8ee643ccb7f5",
     "lib/mml/base.rb": "c68dfa1ab97de3e1a48ee6ea3e591be8e927e764e1d120d0dd3b0295370561ea",
     "lib/mml/base/common_attributes.rb": "af44d9a2497debe4ef19126c11f11408d84a5f5221786b49e6e1d9b5ee85d0a5",
     "lib/mml/base/content/annotation.rb": "5676a5ad9995d0512ba51c28baa99dda914d4288521ac2ebfd2778df58a93fc5",
@@ -177,8 +177,8 @@
     "lib/mml/v4/vector_calculus.rb": "eb11e81ae98d582a43fc45a1a7a88c15f2007160423608bf8a012febf32d4f9e",
     "lib/mml/versioned_parser.rb": "9719e6d37eb945c811f13660928b8827fcd28e69ef4a0e4bd4f63ba983ce85a0"
   },
-  "lutamlModelVersion": "0.8.169",
-  "bundleLockSha256": "6051573ea50bb473fb12ccacb4e2ca48d5e06b9dce0dff6d2647042e76f48ebd",
+  "lutamlModelVersion": "0.8.176",
+  "bundleLockSha256": "f96dc6cd975477125156e67e1e9254993dc0dd6dc4ce517dd60b42d711d2a906",
   "rubyVersion": "4.0.1",
   "verifiedMappings": 190,
   "verifiedContextProbes": 12,

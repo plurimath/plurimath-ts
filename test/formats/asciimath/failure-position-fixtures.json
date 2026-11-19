@@ -295,7 +295,7 @@
       "input": "/",
       "accepts": false,
       "index": 0,
-      "message": "AsciiMath input rejected at character 0 (byte 0): Failed to match: expected one of ['left', '{', [\\u1455], [\\u2112], '[', '(', 'norm', '|', 'prod', 'oint', 'sum', 'int', ',', 'text', 'ustd', 'uexp', 'ucov', 'lim', 'log', 'underset', 'stackrel', 'overset', 'frac', 'root', [\\x21-\\x2a], [\\x2b-\\x2e], '/_\\', '/_', '//', [:], [;], [<], [\\x3d-\\x45], [\\x47-\\x4f], [PQ], [R], [S], [T], [\\x58-\\x6c], [\\x6d-\\x74], [\\x75-\\x78], [z{], [|], [~], [\\u00af], [\\x30-\\x39], '\"unitsml(', '\"', 'd', 'right', [\\x41-\\x5a], [\\x61-\\x7a], [\\x00-\\x08], [\\x0e-\\x1f], [#], [\\u007f-\\u144f], [\\u1451-\\u1454], [\\u1456-\\u2111], [\\u2113-\\u211a], [\\u211c-\\u{10ffff}], '0x', '0X', '0b', '0B', '0o', '0O', '.', 'color', '__|', '_', ' ', '\t', ' at line 1 char 1."
+      "message": "AsciiMath input rejected at character 0 (byte 0): Failed to match: expected one of ['left', '{', [\\u1455], [\\u2112], '[', '(', 'norm', '|', 'prod', 'oint', 'sum', 'int', ',', 'text', '\"', 'lim', 'log', 'underset', 'stackrel', 'overset', 'frac', 'root', [\\x21-\\x2a], [\\x2b-\\x2e], '/_\\', '/_', '//', [:], [;], [<], [\\x3d-\\x45], [\\x47-\\x4f], [PQ], [R], [S], [T], [\\x58-\\x6c], [\\x6d-\\x74], [\\x75-\\x78], [z{], [|], [~], [\\u00af], [\\x30-\\x39], '\"unitsml(', 'd', 'right', [\\x41-\\x5a], [\\x61-\\x7a], [\\x00-\\x08], [\\x0e-\\x1f], [#], [\\u007f-\\u144f], [\\u1451-\\u1454], [\\u1456-\\u2111], [\\u2113-\\u211a], [\\u211c-\\u{10ffff}], '0x', '0X', '0b', '0B', '0o', '0O', '.', 'color', '__|', '_', ' ', '\t', ' at line 1 char 1."
     },
     {
       "id": "expression-48",
@@ -323,7 +323,7 @@
       "input": "/b",
       "accepts": false,
       "index": 0,
-      "message": "AsciiMath input rejected at character 0 (byte 0): Failed to match: expected one of ['left', '{', [\\u1455], [\\u2112], '[', '(', 'norm', '|', 'prod', 'oint', 'sum', 'int', ',', 'text', 'ustd', 'uexp', 'ucov', 'lim', 'log', 'underset', 'stackrel', 'overset', 'frac', 'root', [\\x21-\\x2a], [\\x2b-\\x2e], '/_\\', '/_', '//', [:], [;], [<], [\\x3d-\\x45], [\\x47-\\x4f], [PQ], [R], [S], [T], [\\x58-\\x6c], [\\x6d-\\x74], [\\x75-\\x78], [z{], [|], [~], [\\u00af], [\\x30-\\x39], '\"unitsml(', '\"', 'd', 'right', [\\x41-\\x5a], [\\x61-\\x7a], [\\x00-\\x08], [\\x0e-\\x1f], [#], [\\u007f-\\u144f], [\\u1451-\\u1454], [\\u1456-\\u2111], [\\u2113-\\u211a], [\\u211c-\\u{10ffff}], '0x', '0X', '0b', '0B', '0o', '0O', '.', 'color', '__|', '_', ' ', '\t', ' at line 1 char 1."
+      "message": "AsciiMath input rejected at character 0 (byte 0): Failed to match: expected one of ['left', '{', [\\u1455], [\\u2112], '[', '(', 'norm', '|', 'prod', 'oint', 'sum', 'int', ',', 'text', '\"', 'lim', 'log', 'underset', 'stackrel', 'overset', 'frac', 'root', [\\x21-\\x2a], [\\x2b-\\x2e], '/_\\', '/_', '//', [:], [;], [<], [\\x3d-\\x45], [\\x47-\\x4f], [PQ], [R], [S], [T], [\\x58-\\x6c], [\\x6d-\\x74], [\\x75-\\x78], [z{], [|], [~], [\\u00af], [\\x30-\\x39], '\"unitsml(', 'd', 'right', [\\x41-\\x5a], [\\x61-\\x7a], [\\x00-\\x08], [\\x0e-\\x1f], [#], [\\u007f-\\u144f], [\\u1451-\\u1454], [\\u1456-\\u2111], [\\u2113-\\u211a], [\\u211c-\\u{10ffff}], '0x', '0X', '0b', '0B', '0o', '0O', '.', 'color', '__|', '_', ' ', '\t', ' at line 1 char 1."
     },
     {
       "id": "expression-52",
@@ -575,7 +575,7 @@
       "input": "`",
       "accepts": false,
       "index": 0,
-      "message": "AsciiMath input rejected at character 0 (byte 0): Failed to match: expected one of ['left', '{', [\\u1455], [\\u2112], '[', '(', 'norm', '|', 'prod', 'oint', 'sum', 'int', ',', 'text', 'ustd', 'uexp', 'ucov', 'lim', 'log', 'underset', 'stackrel', 'overset', 'frac', 'root', [\\x21-\\x54], [\\x58-\\x5e], [_], 'arctan', 'arcsin', 'approx', 'arccos', [a], 'abs', [b], 'cancel', 'cdots', 'ceil', 'coth', 'csch', 'cosh', [c], 'csc', 'cot', 'cos', 'cc', [\\x64-\\x67], [hi], [k], [l], 'lub', 'lcm', 'ln', [\\x6d-\\x74], [\\x75-\\x78], [z{], [|], [~], [\\u00af], [\\x30-\\x39], '\"unitsml(', '\"', 'd', 'right', [\\x41-\\x5a], [\\x61-\\x7a], [\\x00-\\x08], [\\x0e-\\x1f], [#], [\\u007f-\\u144f], [\\u1451-\\u1454], [\\u1456-\\u2111], [\\u2113-\\u211a], [\\u211c-\\u{10ffff}], '0x', '0X', '0b', '0B', '0o', '0O', '.', 'color', '__|', '_', ' ', '\t', ' at line 1 char 1."
+      "message": "AsciiMath input rejected at character 0 (byte 0): Failed to match: expected one of ['left', '{', [\\u1455], [\\u2112], '[', '(', 'norm', '|', 'prod', 'oint', 'sum', 'int', ',', 'text', '\"', 'lim', 'log', 'underset', 'stackrel', 'overset', 'frac', 'root', [\\x21-\\x54], [\\x58-\\x5e], [_], 'arctan', 'arcsin', 'approx', 'arccos', [a], 'abs', [b], 'cancel', 'cdots', 'ceil', 'coth', 'csch', 'cosh', [c], 'csc', 'cot', 'cos', 'cc', [\\x64-\\x67], [hi], [k], [l], 'lub', 'lcm', 'ln', [\\x6d-\\x74], [\\x75-\\x78], [z{], [|], [~], [\\u00af], [\\x30-\\x39], '\"unitsml(', 'd', 'right', [\\x41-\\x5a], [\\x61-\\x7a], [\\x00-\\x08], [\\x0e-\\x1f], [#], [\\u007f-\\u144f], [\\u1451-\\u1454], [\\u1456-\\u2111], [\\u2113-\\u211a], [\\u211c-\\u{10ffff}], '0x', '0X', '0b', '0B', '0o', '0O', '.', 'color', '__|', '_', ' ', '\t', ' at line 1 char 1."
     },
     {
       "id": "expression-93",

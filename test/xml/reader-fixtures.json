@@ -5,8 +5,8 @@
   "adapter": {
     "lutaml": "Lutaml::Xml::Adapter::OxAdapter",
     "ox": "2.14.29",
-    "moxml": "0.6.3",
-    "lutamlModel": "0.8.169"
+    "moxml": "0.6.16",
+    "lutamlModel": "0.8.176"
   },
   "fuzzSeed": 20260928,
   "encodingTable": {

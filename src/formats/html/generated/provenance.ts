@@ -44,20 +44,28 @@ export const HTML_PARSER_GENERATED_PROVENANCE: HtmlParserGeneratedProvenance = {
   generatorInputs: new Map([
     [
       "scripts/generate-core-data.rb",
-      "6c3cdec230b1a640e14e2fb8ce212d992914e5c1d502f963a2fcdbad2467de71",
+      "f0ff2e2218d2ba7a54fd73fcfbcaeaddecdbe05220d0480f3294929cd0568a14",
     ],
     [
       "scripts/generate-corpus.rb",
-      "82630cc145295b12b23443c853b5d2841cd7e293c607092409a050e67fc27868",
+      "38f4873f087ac47bee7ac59772a4e30f22590a2bed26bd3ded0149510c5b398b",
     ],
     [
       "scripts/generate-html-parser-data.rb",
-      "0c7d7d34d76b1cee720d985f0bb86be2c1d19dd61bb4d8f004cc263fca1220f8",
+      "d5f50483a69e617f72d7979406ad356bf100d15717f20306511ca378f8533037",
+    ],
+    [
+      "scripts/latex-artifact-probe.rb",
+      "e52c8d1610b1fdef86fc561215511ea75b711b7b938c2e8beab113d2b4dbe676",
+    ],
+    [
+      "scripts/oracle-model-fields.rb",
+      "e1fc7d625191302cf1adc176de1a853a91461e5a73b3e4674af91879fce8089a",
     ],
   ]),
   oracle: "plurimath",
-  oracleVersion: "0.11.17",
-  oracleCommit: "2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256",
+  oracleVersion: "0.11.20",
+  oracleCommit: "1a3033d0881d6c6ba655ab3ce00e0dc3cccfe5b4",
   oracleClean: true,
   generatorClean: true,
   rubyEngine: "ruby",

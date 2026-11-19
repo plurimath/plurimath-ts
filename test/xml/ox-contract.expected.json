@@ -54,8 +54,8 @@
     "entity-text-passthrough": "<mo>&#x2211;</mo>\n",
     "ascii-sweep": "<mtext>\t\n\r !\"#$%&'()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\u007f</mtext>\n",
     "update-nodes-shape": "<mrow>\n  <mi>x</mi>\n  <mo>+</mo>\n  <mn>1</mn>tail</mrow>\n",
-    "math-tree": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mi>x</mi>\n  </mstyle>\n</math>\n",
-    "mathml-specials-tree": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mtext>a&b&lt;c</mtext>\n  </mstyle>\n</math>\n",
-    "mathml-sum-tree": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mrow>\n      <munderover>\n        <mo>&#x2211;</mo>\n        <mrow>\n          <mi>i</mi>\n          <mo>=</mo>\n          <mn>1</mn>\n        </mrow>\n        <mi>n</mi>\n      </munderover>\n      <mi>i</mi>\n    </mrow>\n  </mstyle>\n</math>\n"
+    "math-tree": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mi>x</mi>\n</math>\n",
+    "mathml-specials-tree": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mtext>a&b&lt;c</mtext>\n</math>\n",
+    "mathml-sum-tree": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mrow>\n    <munderover>\n      <mo>&#x2211;</mo>\n      <mrow>\n        <mi>i</mi>\n        <mo>=</mo>\n        <mn>1</mn>\n      </mrow>\n      <mi>n</mi>\n    </munderover>\n    <mi>i</mi>\n  </mrow>\n</math>\n"
   }
 }

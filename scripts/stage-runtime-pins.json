@@ -1,7 +1,7 @@
 {
   "amath": {
-    "repository": "suleman-uzair/amath-ts",
-    "revision": "061b19b5cc3aef4458e7bb770dc018beebf4fe87"
+    "repository": "unitsml/amath-ts",
+    "revision": "876d2ae294fad6f8039e6761b81ce862cb019c35"
   },
   "latexmath": {
     "repository": "plurimath/latexmath-ts",

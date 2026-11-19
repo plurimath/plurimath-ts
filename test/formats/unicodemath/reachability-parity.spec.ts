@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { normalize, ParseError } from "../../../src/core/index";
 import { parseUnicodemath } from "../../../src/formats/unicodemath/index";
+import { currentSourceProfile } from "./current-profile";
 import { expectSupersededAtPin, SUPERSEDED_AT_PIN } from "./superseded-at-pin";
 
 interface Witness {
@@ -54,6 +55,8 @@ const metadata = JSON.parse(
 const current = fixtures.cases.filter((entry) => !SUPERSEDED_AT_PIN.has(entry.input));
 const parsed = current.filter((entry) => entry.model !== undefined);
 const refused = current.filter((entry) => entry.raises !== undefined);
+
+const sourceProfile = currentSourceProfile("reachability");
 
 describe("the measured public inputs from the nine-rule investigation", () => {
   it("retains the historical source, payload and engine calibration", () => {
@@ -111,7 +114,9 @@ describe("the measured public inputs from the nine-rule investigation", () => {
   it.each(parsed.map((entry) => [entry.input, entry] as const))(
     "%j: the public parser reproduces the measured Ruby model",
     (_input, entry) => {
-      expect(normalize(parseUnicodemath(entry.input))).toStrictEqual(entry.model);
+      expect(normalize(parseUnicodemath(entry.input))).toStrictEqual(
+        sourceProfile.get(entry.input)?.model,
+      );
     },
   );
 

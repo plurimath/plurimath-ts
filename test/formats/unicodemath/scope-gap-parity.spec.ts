@@ -11,6 +11,7 @@ import { toLatex } from "../../../src/formats/latex/index";
 import { toMathml } from "../../../src/formats/mathml/index";
 import { toOmml } from "../../../src/formats/omml/index";
 import { parseUnicodemath, toUnicodemath } from "../../../src/formats/unicodemath/index";
+import { currentSourceProfile } from "./current-profile";
 import { expectSupersededAtPin, SUPERSEDED_AT_PIN } from "./superseded-at-pin";
 
 const renderers = {
@@ -43,6 +44,8 @@ const metadata = JSON.parse(
   readonly projection: { readonly rowCount: number };
 };
 
+const sourceProfile = currentSourceProfile("scope-gap");
+
 describe("measured UnicodeMath composition boundaries", () => {
   it.each(
     fixtures.cases
@@ -72,16 +75,20 @@ describe("measured UnicodeMath composition boundaries", () => {
       .filter((entry) => entry.model !== undefined && !SUPERSEDED_AT_PIN.has(entry.input))
       .map((entry) => [entry.input, entry] as const),
   )("%j: preserves Ruby's public model and measured rendering boundaries", (_input, entry) => {
+    const current = sourceProfile.get(entry.input);
+    expect(current, entry.input).toBeDefined();
     const formula: FormulaNode = parseUnicodemath(entry.input);
-    expect(normalize(formula)).toStrictEqual(entry.model);
+    expect(normalize(formula)).toStrictEqual(current?.model);
     for (const format of Object.keys(renderers) as Format[]) {
-      if (Object.hasOwn(entry, `${format}Error`)) {
+      if (Object.hasOwn(current ?? {}, `${format}Error`)) {
         expect(() => renderers[format](formula), `${entry.input}: ${format}`).toThrow(
           PlurimathError,
         );
       } else {
-        expect(Object.hasOwn(entry, format), `${entry.input}: missing ${format}`).toBe(true);
-        expect(renderers[format](formula), `${entry.input}: ${format}`).toBe(entry[format]);
+        expect(Object.hasOwn(current ?? {}, format), `${entry.input}: missing ${format}`).toBe(
+          true,
+        );
+        expect(renderers[format](formula), `${entry.input}: ${format}`).toBe(current?.[format]);
       }
     }
   });

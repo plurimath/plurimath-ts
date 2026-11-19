@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { normalize } from "../../../src/core/index";
 import { toMathml } from "../../../src/formats/mathml/index";
 import { parseUnicodemath } from "../../../src/formats/unicodemath/index";
+import { currentSourceProfile } from "./current-profile";
 
 interface IntegralWitness {
   readonly input: string;
@@ -21,6 +22,8 @@ const integrals = fixtures.cases.filter(
   (entry) => entry.route === "scope-gap/integral-mask" && entry.model !== undefined,
 );
 
+const sourceProfile = currentSourceProfile("scope-gap");
+
 describe("the measured public integral-mask MathML routes", () => {
   it("includes both measured mask-one shapes and their successful outputs", () => {
     expect(fixtures.schema).toBe("plurimath-unicodemath-scope-gap/1");
@@ -34,9 +37,10 @@ describe("the measured public integral-mask MathML routes", () => {
   it.each(integrals.map((entry) => [entry.input, entry] as const))(
     "%j: the public parser and MathML renderer reproduce the Ruby observation",
     (_input, entry) => {
+      const current = sourceProfile.get(entry.input);
       const formula = parseUnicodemath(entry.input);
-      expect(normalize(formula)).toStrictEqual(entry.model);
-      expect(toMathml(formula)).toBe(entry.mathml);
+      expect(normalize(formula)).toStrictEqual(current?.model);
+      expect(toMathml(formula)).toBe(current?.mathml);
     },
   );
 });

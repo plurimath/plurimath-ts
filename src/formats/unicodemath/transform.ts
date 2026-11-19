@@ -4360,6 +4360,13 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => [...asArray(b.factor), ...asArray(b.operand)],
   );
 
+  // Current Ruby builds a fence when quoted text precedes a single expression.
+  // The XML-origin source profile measures this inside a sum's naryand.
+  fenced("01120:3606", { text: simple("text"), exp: simple("exp") }, (b) => [
+    newText(b.text),
+    b.exp,
+  ]);
+
   fenced(
     "3564",
     {

@@ -52,7 +52,7 @@ export const UNICODEMATH_PARSER_GENERATED_PROVENANCE: UnicodemathParserGenerated
     ],
     [
       "scripts/generate-unicodemath-parser-data.rb",
-      "d4d3cfc1979716bc32aae63121ef83ddeea7ca466d1650db4069e0d26fc6ee4e",
+      "b1c13c0f9db8264bf3647c254d221f648d773f2abda86bfc26b4e524cb30c114",
     ],
     [
       "scripts/unicodemath-artifact-probe.rb",

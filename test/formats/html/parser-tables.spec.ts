@@ -221,6 +221,8 @@ describe("provenance", () => {
       "scripts/generate-core-data.rb",
       "scripts/generate-corpus.rb",
       "scripts/generate-html-parser-data.rb",
+      "scripts/latex-artifact-probe.rb",
+      "scripts/oracle-model-fields.rb",
     ]);
   });
 });

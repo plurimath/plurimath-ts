@@ -9,7 +9,6 @@
 
 import { type MathNode, type NodeKind, RenderError } from "../../core/index";
 import { renderAbs } from "../../render/abs/latex";
-import { renderAnnotation } from "../../render/annotation/latex";
 import { renderBar } from "../../render/bar/latex";
 import { renderBase } from "../../render/base/latex";
 import { renderBinaryFunction } from "../../render/binary-function/latex";
@@ -57,8 +56,7 @@ import {
   type UnitsmlRenderOptions,
 } from "./render-shared";
 
-const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
-  annotation: renderAnnotation,
+const RENDERERS: { readonly [K in Exclude<NodeKind, "annotation">]: RenderFn<K> } = {
   abs: renderAbs,
   bar: renderBar,
   base: renderBase,
@@ -113,6 +111,10 @@ function renderNode(node: MathNode, context: RenderContext): string | null {
   // validation with a valid kind can answer a later read with anything, and
   // three reads (index, error message, error kind) could see three values.
   const kind = node.kind;
+  // Annotation is a mapping node; Ruby has no standalone renderer for it.
+  if (kind === "annotation") {
+    throw new RenderError("Annotation is a mapping node with no Ruby renderer", "latex", kind);
+  }
   // The own-property check is the runtime guard, §5's other half:
   // compile-time closure does not bind JavaScript callers, and the entry
   // validator's rejection must hold even off the public path. `Object.hasOwn`

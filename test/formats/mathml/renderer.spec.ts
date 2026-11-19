@@ -5,13 +5,14 @@
  * the pinned oracle's own output (plurimath 0.11.6 at 00c52783; probes
  * probe-mathml-kinds.rb, probe-mathml-edges.rb, probe-mathml-edges3.rb in
  * the PR record), and every refusal marks a spot where the gem crashes or
- * where reproducing it would need an unmeasured subsystem
+ * The wrapper and thick-space expectations follow the current Ruby 0.11.20
+ * facade corpus (#476/#477); the earlier probes remain the source for the
+ * other rendering branches.
+ *
+ * Refusals also mark places where reproducing it would need an unmeasured subsystem
  * (TODO.plan/deferred.md).
  */
 
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { MissingSymbolDataError, RenderError } from "../../../src/core/errors";
 import {
@@ -60,7 +61,7 @@ function math(inner: string, displaystyle = "true"): string {
 }
 
 const SIN_SPACED =
-  '    <mrow>\n      <mo rspace="thickmathspace"/>\n      <mrow>\n' +
+  '    <mrow>\n      <mo rspace="0.2778em"/>\n      <mrow>\n' +
   "        <mi>sin</mi>\n        <mi>x</mi>\n      </mrow>\n    </mrow>";
 const SIN_BARE = "    <mrow>\n      <mi>sin</mi>\n      <mi>x</mi>\n    </mrow>";
 
@@ -246,9 +247,9 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
   });
 
   it('base Symbol: rspace attribute, {: empty mi, "" long form (probes symbol-*)', () => {
-    expect(
-      toMathml(formula(new SymbolNode({ value: "x", options: { rspace: "thickmathspace" } }))),
-    ).toBe(math('    <mo rspace="thickmathspace">x</mo>'));
+    expect(toMathml(formula(new SymbolNode({ value: "x", options: { rspace: "0.2778em" } })))).toBe(
+      math('    <mo rspace="0.2778em">x</mo>'),
+    );
     expect(toMathml(formula(new SymbolNode({ value: "{:" })))).toBe(math("    <mi/>"));
     expect(toMathml(formula(new SymbolNode({ value: "" })))).toBe(math("    <mi></mi>"));
     expect(toMathml(formula(new SymbolNode({ value: null })))).toBe(math("    <mi/>"));
@@ -290,9 +291,9 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     expect(toMathml(formula(new SymbolNode({ id: "Plus", value: "" })))).toBe(
       math("    <mo></mo>"),
     );
-    expect(
-      toMathml(formula(new SymbolNode({ id: "Plus", options: { rspace: "thickmathspace" } }))),
-    ).toBe(math("    <mo>+</mo>"));
+    expect(toMathml(formula(new SymbolNode({ id: "Plus", options: { rspace: "0.2778em" } })))).toBe(
+      math("    <mo>+</mo>"),
+    );
   });
 
   it("a number renders <mn>; nil is the long form; a finite JS number refuses (ambiguous)", () => {
@@ -357,16 +358,13 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     ).toThrow(RenderError);
   });
 
-  it("a live integral mask matches the scope probe; the inert nil-key mask renders", () => {
-    const measured = JSON.parse(
-      readFileSync(
-        join(dirname(fileURLToPath(import.meta.url)), "../unicodemath/scope-gap-fixtures.json"),
-        "utf8",
+  it("a live integral mask uses the current oracle wrapper; the inert nil-key mask renders", () => {
+    // Fresh Ruby 0.11.20 at 1a3033d0; the historical scope projection stays unchanged.
+    expect(toMathml(parseUnicodemath("∫1_a"))).toBe(
+      math(
+        "    <munderover>\n      <mo>&#x222b;</mo>\n      <mi>a</mi>\n      <mrow/>\n    </munderover>",
       ),
-    ) as { readonly cases: readonly { readonly input: string; readonly mathml?: string }[] };
-    const masked = measured.cases.find((entry) => entry.input === "∫1_a");
-    expect(masked?.mathml).toBeTypeOf("string");
-    expect(toMathml(parseUnicodemath("∫1_a"))).toBe(masked?.mathml);
+    );
     const inert = new IntNode({ parameterOne: x(), parameterTwo: y(), options: { mask: null } });
     expect(toMathml(formula(inert))).toBe(
       math(
@@ -596,7 +594,7 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     const marked = new BarNode({ parameterOne: x(), attributes: { unitsml: "true" } });
     const output = toMathml(formula(marked));
     expect(output).not.toContain("unitsml=");
-    expect(output).not.toContain('rspace="thickmathspace"');
+    expect(output).not.toContain('rspace="0.2778em"');
     expect(output).toBe(toMathml(formula(new BarNode({ parameterOne: x() }))));
   });
 
@@ -604,7 +602,7 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     const marked = new BarNode({ parameterOne: x(), attributes: { unitsml: "true" } });
     const output = toMathml(new FormulaNode({ value: [x(), marked] }));
     expect(output).not.toContain("unitsml=");
-    expect(output).toContain('rspace="thickmathspace"');
+    expect(output).toContain('rspace="0.2778em"');
   });
 
   it("powerbase: an underover symbol base flips the tag; a Nary base crashes (probed)", () => {

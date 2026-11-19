@@ -1,6 +1,5 @@
-import type { MathNode, NodeKind } from "../../core/index";
+import { type MathNode, type NodeKind, RenderError } from "../../core/index";
 import { renderAbs } from "../../render/abs/omml";
-import { renderAnnotation } from "../../render/annotation/omml";
 import { renderBar } from "../../render/bar/omml";
 import { renderBase } from "../../render/base/omml";
 import { renderBinaryFunction } from "../../render/binary-function/omml";
@@ -49,8 +48,7 @@ import type {
 } from "./render-shared";
 
 /** One measured renderer per `NodeKind`; the mapped type makes omissions compile errors. */
-const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
-  annotation: renderAnnotation,
+const RENDERERS: { readonly [K in Exclude<NodeKind, "annotation">]: RenderFn<K> } = {
   abs: renderAbs,
   bar: renderBar,
   base: renderBase,
@@ -94,7 +92,12 @@ const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
 };
 
 function renderNode(node: MathNode, context: RenderContext): OmmlRendered {
-  const render = RENDERERS[node.kind] as RenderFn<NodeKind>;
+  const kind = node.kind;
+  // Annotation is a mapping node; Ruby has no standalone renderer for it.
+  if (kind === "annotation") {
+    throw new RenderError("Annotation is a mapping node with no Ruby renderer", "omml", kind);
+  }
+  const render = RENDERERS[kind] as RenderFn<NodeKind>;
   return render(node, context);
 }
 

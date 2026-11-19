@@ -35,6 +35,9 @@ module NativeCompletionReference
     require "unitsml"
     require "unitsdb"
     require_relative "generate-corpus"
+    # Model conversion selects Ox globally; select it before the first render
+    # so repeated native probes share the canonical XML adapter.
+    Lutaml::Model::Config.xml_adapter_type = :ox
     raise "wrong loaded oracle" unless Gem.loaded_specs.fetch("plurimath").full_gem_path == File.realpath(oracle)
     raise "wrong dependency versions" unless Gem.loaded_specs.fetch("unitsml").version.to_s == "0.6.14" && Gem.loaded_specs.fetch("unitsdb").version.to_s == "2.2.15"
   end

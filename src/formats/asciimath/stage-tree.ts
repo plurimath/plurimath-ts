@@ -25,6 +25,20 @@ const STAGE_DEPTH_ERRORS: ReadonlySet<string> = new Set([
   "ShapeDepthLimitExceeded",
 ]);
 
+/**
+ * Turns the stage's own depth refusal into the typed refusal the in-tree
+ * grammar's MAX_DEPTH guard gives (no position), for the default
+ * `parse(input, "asciimath")` path. The experimental `createAsciimathParser`
+ * keeps the runtime's typed resource error, as the latex and unicodemath
+ * stage parsers do.
+ */
+export function refuseStageDepth(error: unknown, input: string): never {
+  if (error instanceof Error && STAGE_DEPTH_ERRORS.has(error.name)) {
+    throw new ParseError(DEPTH_LIMIT_MESSAGE, input, "asciimath", 0);
+  }
+  throw error;
+}
+
 /** RawTree wrapper removal and Renester belong to the shared stage. */
 export type AmathCapture = StageCapture;
 
@@ -53,11 +67,6 @@ export function parseStageTree(
       const index =
         error.byteOffset === null ? 0 : map.toOriginal(positionAt(positions, error.byteOffset));
       throw new ParseError(error.message, input, "asciimath", index);
-    }
-    if (error instanceof Error && STAGE_DEPTH_ERRORS.has(error.name)) {
-      // The stage refused the depth before the engine stack ran out: the same
-      // typed refusal the in-tree grammar's MAX_DEPTH guard gives. No position.
-      throw new ParseError(DEPTH_LIMIT_MESSAGE, input, "asciimath", 0);
     }
     // Artifact/initialization failures must never turn into syntax errors.
     throw error;

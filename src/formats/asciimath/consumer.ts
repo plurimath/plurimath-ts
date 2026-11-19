@@ -3,7 +3,7 @@ import { requireKnownParseOptions } from "../../core/errors";
 import { type FormulaNode, type OnUnsupported, ParseError } from "../../core/index";
 import { isStackOverflow } from "../../core/stack-overflow";
 import { InvalidUncertaintyError } from "../../core/uncertainty";
-import { decimalMarkerFor, type LocaleOptions, requireLocaleKey } from "../../formatting/index";
+import { type LocaleOptions, requireLocaleKey } from "../../formatting/index";
 import { STACK_EXHAUSTED_MESSAGE } from "../../pegkit/atom";
 import type { ParseValue } from "../../pegkit/index";
 import { asciimathTransform, finalizeAsciimathParse } from "./transform";

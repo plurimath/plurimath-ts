@@ -17,7 +17,7 @@ import type { FormulaNode } from "../../core/index";
 import type { ParseValue } from "../../pegkit/index";
 import { type AsciimathParseOptions, transformAsciimathTree } from "./consumer";
 import { asciimathStageBinding } from "./stage";
-import { parseStageTree } from "./stage-tree";
+import { parseStageTree, refuseStageDepth } from "./stage-tree";
 
 export type { AsciimathParseOptions } from "./consumer";
 
@@ -29,7 +29,11 @@ export function parseAsciimathTree(
   input: string,
   options?: AsciimathParseOptions | null,
 ): ParseValue {
-  return parseStageTree(asciimathStageBinding, input, options);
+  try {
+    return parseStageTree(asciimathStageBinding, input, options);
+  } catch (error) {
+    return refuseStageDepth(error, input);
+  }
 }
 
 /** `Plurimath::Math.parse(input, :asciimath)`'s observable result. */

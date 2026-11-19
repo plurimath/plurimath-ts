@@ -15,9 +15,9 @@
 
 import type { FormulaNode } from "../../core/index";
 import type { ParseValue } from "../../pegkit/index";
-import { parseStageTree } from "./amath";
 import { type AsciimathParseOptions, transformAsciimathTree } from "./consumer";
 import { asciimathStageBinding } from "./stage";
+import { parseStageTree } from "./stage-tree";
 
 export type { AsciimathParseOptions } from "./consumer";
 

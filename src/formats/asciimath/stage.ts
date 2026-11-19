@@ -14,7 +14,7 @@ import bindings from "@plurimath/amath-ts/artifacts/asciimath.bindings.ts.json" 
 import artifact from "@plurimath/amath-ts/artifacts/asciimath.json" with { type: "json" };
 import { type Decimal, Parser } from "@plurimath/amath-ts/browser";
 import { PargRuntime } from "parsanol";
-import type { AmathSyncBinding } from "./amath";
+import type { AmathSyncBinding } from "./stage-tree";
 
 /** `Asciimath::Mapper::WRAPPERS`: RawTree wrapper keys and the capture each becomes. */
 const WRAPPERS: Readonly<Record<string, string>> = Object.freeze(

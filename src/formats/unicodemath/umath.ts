@@ -64,7 +64,7 @@ const U_ESCAPE_KEPT: ReadonlySet<number> = new Set([0x2af7, 0x2af8]);
  * ASCII escape, a comment bracket and a value that is not a character stay
  * for umath.
  */
-export function expandEscapes(text: string): string {
+function expandEscapes(text: string): string {
   return text.replace(U_ESCAPE, (found, digits: string) => {
     const code = Number.parseInt(digits, 16);
     if (code < 0x80 || U_ESCAPE_KEPT.has(code) || (code >= 0xd800 && code <= 0xdfff)) return found;

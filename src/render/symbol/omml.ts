@@ -11,6 +11,7 @@ import {
   type RenderContext,
   symbolOmmlValue,
   symbolTextTag,
+  textElement,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
@@ -24,10 +25,17 @@ import { XmlElement } from "../../xml/index";
  */
 const INVISIBLE_TIMES_ENTITY = "&#x2062;";
 
+function explicitThickSpace(node: NodeOf<"symbol">): boolean {
+  return (
+    node.value === INVISIBLE_TIMES_ENTITY &&
+    (node.options?.rspace === "thickmathspace" || node.options?.rspace === "0.2778em")
+  );
+}
+
 /** `Symbols::Symbol#to_omml_without_math_tag`: the class literal, or the stored value. */
 export function renderSymbol(node: NodeOf<"symbol">): string | null {
   const value = symbolOmmlValue(node, node.kind);
-  return value === INVISIBLE_TIMES_ENTITY ? null : value;
+  return value === INVISIBLE_TIMES_ENTITY ? (explicitThickSpace(node) ? "&#x2004;" : null) : value;
 }
 
 /** `Symbols::Symbol#insert_t_tag`: one `m:r` containing one `m:t`. */
@@ -35,6 +43,8 @@ export function renderSymbolInserted(
   node: NodeOf<"symbol">,
   _context: RenderContext,
 ): XmlElement | null {
-  if (node.value === INVISIBLE_TIMES_ENTITY) return null;
+  if (node.value === INVISIBLE_TIMES_ENTITY) {
+    return explicitThickSpace(node) ? new XmlElement("m:r").append(textElement("&#x2004;")) : null;
+  }
   return new XmlElement("m:r").append(symbolTextTag(node, node.kind));
 }

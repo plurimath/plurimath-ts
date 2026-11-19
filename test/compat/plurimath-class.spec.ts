@@ -884,17 +884,17 @@ describe("toDisplay", () => {
       expect(build().toDisplay("mathml")).toBe(
         '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">' +
           "<munder><mo>lim</mo><mrow><mi>x</mi><mo>&#x2192;</mo>" +
-          '<mn>0</mn></mrow></munder><mfrac><mrow><mo rspace="thickmathspace"/><mrow><mi>sin</mi>' +
+          '<mn>0</mn></mrow></munder><mfrac><mrow><mo rspace="0.2778em"/><mrow><mi>sin</mi>' +
           "<mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mi>x</mi></mfrac>" +
           '</math>"\n' +
           '     |_ "<munder><mo>lim</mo><mrow><mi>x</mi><mo>&#x2192;</mo><mn>0</mn></mrow></munder>"' +
           " limit\n" +
           '     |  |_ "<mrow><mi>x</mi><mo>&#x2192;</mo><mn>0</mn></mrow>" limit subscript\n' +
-          '     |_ "<mfrac><mrow><mo rspace="thickmathspace"/><mrow><mi>sin</mi><mrow><mo>(</mo>' +
+          '     |_ "<mfrac><mrow><mo rspace="0.2778em"/><mrow><mi>sin</mi><mrow><mo>(</mo>' +
           '<mi>x</mi><mo>)</mo></mrow></mrow></mrow><mi>x</mi></mfrac>" fraction\n' +
-          '        |_ "<mrow><mo rspace="thickmathspace"/><mrow><mi>sin</mi><mrow><mo>(</mo>' +
+          '        |_ "<mrow><mo rspace="0.2778em"/><mrow><mi>sin</mi><mrow><mo>(</mo>' +
           '<mi>x</mi><mo>)</mo></mrow></mrow></mrow>" numerator\n' +
-          '        |  |_ "<mrow><mo rspace="thickmathspace"/><mrow><mi>sin</mi><mrow><mo>(</mo>' +
+          '        |  |_ "<mrow><mo rspace="0.2778em"/><mrow><mi>sin</mi><mrow><mo>(</mo>' +
           '<mi>x</mi><mo>)</mo></mrow></mrow></mrow>" function apply\n' +
           '        |     |_ "sin" function name\n' +
           '        |     |_ "<mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow>" argument\n' +

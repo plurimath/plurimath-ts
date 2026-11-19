@@ -1784,7 +1784,7 @@ describe("named tables", () => {
       ["Align", "\\begin{bmatrix}x\\end{bmatrix}"],
       ["Array", "\\begin{array}.x\\end{array}"],
       ["Bmatrix", "\\begin{bmatrix}x\\end{bmatrix}"],
-      ["Cases", "\\left \\{\\begin{matrix}x\\end{matrix}\\right "],
+      ["Cases", "\\begin{cases}x\\end{cases}"],
       ["Eqarray", "\\left \\begin{matrix}x\\end{matrix}\\right "],
       ["Multline", "\\begin{bmatrix}x\\end{bmatrix}"],
       ["Pmatrix", "\\begin{pmatrix}x\\end{pmatrix}"],
@@ -1954,9 +1954,7 @@ describe("named tables", () => {
       "\\left [\\begin{matrix}x\\end{matrix}\\right ]",
     );
     expect(toLatex(carrier("Array", null, null))).toBe("\\begin{array}.x\\end{array}");
-    expect(toLatex(carrier("Cases", null, null))).toBe(
-      "\\left .\\begin{matrix}x\\end{matrix}\\right .",
-    );
+    expect(toLatex(carrier("Cases", null, null))).toBe("\\begin{cases}x\\end{cases}");
   });
 
   it("a td parameterTwo raises exactly where Hash() cannot convert it — nil and [] can", () => {

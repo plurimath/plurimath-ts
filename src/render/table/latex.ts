@@ -4,8 +4,7 @@
  * `#latex_columnalign` (:270) — and the carrier name arms the census folds
  * in: `table/matrix.rb` (:22) with its six `\begin{env}` siblings
  * (`align.rb`, `bmatrix.rb`, `multline.rb`, `pmatrix.rb`, `split.rb`,
- * `vmatrix.rb`, each :15) and `table/array.rb` (:15). `Cases` and `Eqarray`
- * have no override and take the generic path.
+ * `vmatrix.rb`, each :15) and `table/array.rb` (:15). `Cases` emits its own environment; `Eqarray` takes the generic path.
  *
  * Measured pins worth naming, because source-reading gets them wrong: a bare
  * `Table` with a NIL open paren takes the gem's `environment == "array"`
@@ -87,7 +86,8 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): stri
   if (name !== undefined && MATRIX_STYLE_TABLE_NAMES.has(name))
     return renderMatrixTable(node, name, context);
   if (name === "Array") return renderArrayTable(node, context);
-  // The bare carrier, `Cases` and `Eqarray` — no override in the gem — take
+  if (name === "Cases") return `\\begin{cases}${latexContent(node, context)}\\end{cases}`;
+  // The bare carrier and `Eqarray` — no override in the gem — take
   // `Table#to_latex` (`table.rb:79`).
   return renderGenericTable(node, context);
 }

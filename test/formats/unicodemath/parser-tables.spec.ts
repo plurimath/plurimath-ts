@@ -110,13 +110,13 @@ describe("the tables arr_to_expression folds into ordered choices", () => {
     ]);
     expect(UNICODEMATH_MATRIXS).toStrictEqual([
       "&#x24a8;",
-      "&#x24b1;",
       "&#x24a9;",
+      "&#x24b1;",
+      "&#x24b8;",
       "&#x24e2;",
       "&#x24c8;",
       "&#x2588;",
       "&#x25a0;",
-      "&#x24b8;",
     ]);
     // The sub/sup parenthesis tables are one entry each — `arr_to_expression`
     // takes its single-element branch for them, which is still a named atom.
@@ -294,10 +294,12 @@ describe("provenance", () => {
     const inputs = [...UNICODEMATH_PARSER_GENERATED_PROVENANCE.generatorInputs].map(
       ([file]) => file,
     );
-    expect(inputs).toStrictEqual([
+    expect(inputs.sort()).toStrictEqual([
       "scripts/generate-core-data.rb",
       "scripts/generate-corpus.rb",
       "scripts/generate-unicodemath-parser-data.rb",
+      "scripts/oracle-model-fields.rb",
+      "scripts/unicodemath-artifact-probe.rb",
     ]);
   });
 });

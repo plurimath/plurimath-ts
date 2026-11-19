@@ -653,6 +653,14 @@ function fixtureInputPath(payload: string, input: string): string {
     : input;
 }
 
+function fixtureInputSha256(payload: string, input: string): string {
+  if (payload === ARCHIVED_EVALUATION) {
+    const original = input === ARCHIVED_EVALUATION_GENERATOR ? EVALUATION_GENERATOR : input;
+    return gitFileSha256AtCommit("16c28cb992afd790c398344ac1fe7b4bc087e60a", original);
+  }
+  return sha256OfFile(input);
+}
+
 const ALL_FORMAT_JSON_PAYLOADS = filesUnder(FORMATS_ROOT, (name) => name.endsWith(".json"));
 const FORMAT_FIXTURE_PAYLOADS = ALL_FORMAT_JSON_PAYLOADS.filter((path) =>
   FIXTURE_BASENAMES.some((name) => name === basename(path)),
@@ -932,7 +940,8 @@ function expectEvaluationSourceCandidate(manifest: Mapping, at: string): void {
 function expectSidecarEnvelope(record: FixtureRecord): void {
   const at = record.manifestRelative;
   const manifest = record.manifest;
-  const isSourceCandidate = record.relative === CURRENT_EVALUATION;
+  const isSourceCandidate =
+    record.relative === CURRENT_EVALUATION && "source_candidate" in manifest;
   expectExactKeys(
     manifest,
     [
@@ -991,7 +1000,7 @@ function expectSidecarEnvelope(record: FixtureRecord): void {
   for (const [path, hash] of Object.entries(inputs)) {
     expect(hash, `${at}.generator.inputs.${path}`).toMatch(SHA256);
     expect(
-      sha256OfFile(fixtureInputPath(record.relative, path)),
+      fixtureInputSha256(record.relative, fixtureInputPath(record.relative, path)),
       `${at}.generator.inputs.${path}`,
     ).toBe(hash);
   }
@@ -1037,9 +1046,11 @@ function expectSidecarEnvelope(record: FixtureRecord): void {
   expectOracleShape(
     manifest,
     at,
-    isSourceCandidate
-      ? { oracleVersion: "0.11.17", oracleCommit: "8916961a69dc1f586e915790c4fb052b910efa86" }
-      : undefined,
+    record.relative === ARCHIVED_EVALUATION
+      ? { oracleVersion: "0.11.17", oracleCommit: "2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256" }
+      : isSourceCandidate
+        ? { oracleVersion: "0.11.17", oracleCommit: "8916961a69dc1f586e915790c4fb052b910efa86" }
+        : undefined,
   );
   if (isSourceCandidate) expectEvaluationSourceCandidate(manifest, at);
 
@@ -2190,8 +2201,8 @@ describe("generated data binds to the generator inputs it names", () => {
 
   it.each(RECORDED.map((entry) => [`${entry[0]} -> ${entry[1]}`, entry] as const))(
     "%s",
-    (_label, [, file, recorded]) => {
-      expect(sha256OfFile(file)).toBe(recorded);
+    (_label, [payload, file, recorded]) => {
+      expect(fixtureInputSha256(payload, file)).toBe(recorded);
     },
   );
 

@@ -113,7 +113,7 @@ module OracleArtifacts
                   "--out", at.call("test/formats/#{format}/degenerate-fixtures.json")]]
       end
       { "asciimath-failure-positions" => "test/formats/asciimath", "cli-fixtures" => "test/formats/cli",
-        "evaluation-fixtures" => "test/formats/evaluation", "render-options-fixtures" => "test/formats",
+        "evaluation-fixtures" => "test/formats/evaluation/ruby-8916961-v1", "render-options-fixtures" => "test/formats",
         "xml-fixtures" => "test/xml", "xml-reader-fixtures" => "test/xml" }.each do |script, dir|
         jobs << [script, "generate-#{script}.rb", ["--oracle", @oracle, "--out", at.call(dir)]]
       end
@@ -135,7 +135,10 @@ module OracleArtifacts
       end
       sweeps = %w[asciimath latex mathml].map { |format| "test/formats/#{format}/render-sweep.json" }
       raise "untracked render sweep" unless (sweeps - files).empty?
-      (roots + fixture_paths + sweeps).uniq.sort
+      # The root evaluation profile is an immutable historical reference.
+      historical = %w[test/formats/evaluation/evaluation-fixtures.json
+        test/formats/evaluation/evaluation-fixtures.manifest.yaml]
+      ((roots + fixture_paths + sweeps).uniq - historical).sort
     end
 
     def omitted_family_paths

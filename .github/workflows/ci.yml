@@ -303,7 +303,7 @@ jobs:
     # A literal, as in the gems' corpus.yml, so this file fixes the commit; a
     # step checks it against every pin and against the submodule gitlink.
     env:
-      TESTSUITE_COMMIT: 9767c37a8d7bb21a0694780ecfcbc4f1fbd9eb39
+      TESTSUITE_COMMIT: c21db73dd99c6a535e1ea2ec03e47474a52d0cd4
       TESTSUITE: submodules/plurimath-testsuite
       PINS: test/fixtures/testsuite-pins
     steps:
@@ -342,24 +342,52 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # The unicode typed-model rows replay through umath-ts
-      # (test/replay/umath-stage-replay.spec.ts), at the revision the gates
-      # job builds.
+      # The latex, unicode, mathml and omml typed-model and model-roundtrip
+      # rows replay through the stage packages (test/replay/stage-packages.ts).
+      # umath-ts and latexmath-ts are at the revisions the gates job builds.
+      # mml-ts and omml-ts are at the heads of their corpus-replay pull
+      # requests (plurimath/mml-ts#3, plurimath/omml-ts#3) until those merge;
+      # their moxml-ts git dependency builds in its prepare script, so they
+      # install with scripts.
       - uses: actions/checkout@v5
         with:
           repository: plurimath/umath-ts
           ref: 787840cc71a1e31ac6a2df6873b9dacad4b39241
           path: .stage-deps/umath
-      - name: Build pinned umath stage
+      - uses: actions/checkout@v5
+        with:
+          repository: plurimath/latexmath-ts
+          ref: 25537f4a2c09b522340d23804704fe99e4a94ecc
+          path: .stage-deps/latexmath
+      - uses: actions/checkout@v5
+        with:
+          repository: plurimath/mml-ts
+          ref: b12a6f494fdc756e0140af10baca955c74c2782c
+          path: .stage-deps/mml
+      - uses: actions/checkout@v5
+        with:
+          repository: plurimath/omml-ts
+          ref: fecc67ab7e47e313253e65e297c53f9e87558b34
+          path: .stage-deps/omml
+      - name: Build pinned stage packages
         run: |
-          npm --prefix .stage-deps/umath install --ignore-scripts
-          npm --prefix .stage-deps/umath run build
+          for stage in umath latexmath; do
+            npm --prefix ".stage-deps/$stage" install --ignore-scripts
+            npm --prefix ".stage-deps/$stage" run build
+          done
+          for stage in mml omml; do
+            npm --prefix ".stage-deps/$stage" ci
+            npm --prefix ".stage-deps/$stage" run build
+          done
 
       # `shell: bash` runs with pipefail, so a failing replay fails the step.
       - name: Replay every row of every pinned generation
         env:
           STAGE_REPLAY_REPORT: ${{ github.workspace }}/tmp/replay/replay-report.json
           UMATH_TS_DIST: ${{ github.workspace }}/.stage-deps/umath/dist
+          LATEXMATH_TS_DIST: ${{ github.workspace }}/.stage-deps/latexmath/dist
+          MML_TS_DIST: ${{ github.workspace }}/.stage-deps/mml/dist
+          OMML_TS_DIST: ${{ github.workspace }}/.stage-deps/omml/dist
         run: |
           mkdir -p tmp/replay
           pnpm exec vitest run test/replay 2>&1 | tee tmp/replay/replay.log

@@ -121,7 +121,7 @@ dependencies:
 corpus:
   path: submodules/plurimath-testsuite
   repository:
-    commit: 9767c37a8d7bb21a0694780ecfcbc4f1fbd9eb39
+    commit: c21db73dd99c6a535e1ea2ec03e47474a52d0cd4
     clean: true
     dirty_paths: []
   provenance:

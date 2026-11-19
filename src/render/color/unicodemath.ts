@@ -1,5 +1,7 @@
 /**
- * Mirrors `function/color.rb` — `Color#to_unicodemath` (:65).
+ * Mirrors `function/color.rb` — `Color#to_unicodemath` (:81 on plurimath main).
+ * The colour is written with its whitespace removed (`&.gsub(/\s/, "")`), so an
+ * AsciiMath colour name, which renders as spaced letters, reads `✎(red&x)`.
  *
  * The operator depends on the node's own options: `☁` for a background colour,
  * `✎` otherwise (`color.rb:71`). Neither parameter is guarded in the gem, so a
@@ -22,7 +24,11 @@ export function renderColor(node: NodeOf<"color">, context: RenderContext): stri
   const operator = present(node.options?.backgroundcolor) ? BACKGROUND : FOREGROUND;
   // Both children are called WITHOUT `&.`, so neither nil nor false survives:
   // `Color.new(nil, x)` and `Color.new(false, x)` both raise NoMethodError.
-  const one = renderChild(node.parameterOne, context, "color.parameterOne") ?? "";
+  // Ruby's `\s` is ASCII whitespace only: space, \t, \n, \v, \f and \r.
+  const one = (renderChild(node.parameterOne, context, "color.parameterOne") ?? "").replace(
+    /[ \t\n\v\f\r]/g,
+    "",
+  );
   const two = renderChild(node.parameterTwo, context, "color.parameterTwo") ?? "";
   return `${operator}(${one}&${two})`;
 }

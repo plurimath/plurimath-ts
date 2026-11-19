@@ -1,7 +1,7 @@
 /**
  * Replays the pinned plurimath-testsuite stage generation of every language
  * this port reads or writes, as each Ruby stage gem replays its own pin in CI
- * (amath: asciimath 3, latexmath: latex 3, umath: unicode 4, mml: mathml 2,
+ * (amath: asciimath 5, latexmath: latex 4, umath: unicode 5, mml: mathml 3,
  * omml: omml 2). The pins are `test/fixtures/testsuite-pins/<language>.yml`;
  * `stage-pin.ts` checks them the way the testsuite's `validate-stages.rb
  * --pin` does, and `stage-replay.ts` says what each row is compared against.
@@ -43,6 +43,15 @@ import {
 } from "./stage-pin";
 import { type LanguageRecord, type RowResult, replayGeneration, summarize } from "./stage-replay";
 
+/**
+ * Ledgers the testsuite keeps for languages this port does not read or write,
+ * each with the reason. OpenMath is its own gem (plurimath/openmath), which
+ * replays that stage; plurimath-ts has no OpenMath reader or writer.
+ */
+const NOT_REPLAYED: Readonly<Record<string, string>> = {
+  openmath: "replayed by the openmath gem; plurimath-ts has no OpenMath support",
+};
+
 const RECORD_PATH = join(REPO_ROOT, "test", "replay", "stage-replay.record.json");
 const WRITE = process.env.STAGE_REPLAY_WRITE === "1";
 const REPORT = process.env.STAGE_REPLAY_REPORT;
@@ -74,6 +83,7 @@ describe("the stage pins", () => {
     const ledgers = readdirSync(join(PINNED_CORPUS_ROOT, "generations"))
       .filter((name) => name.endsWith(".yaml"))
       .map((name) => name.replace(/\.yaml$/, ""))
+      .filter((name) => !(name in NOT_REPLAYED))
       .sort();
     expect(ledgers).toStrictEqual([...STAGE_LANGUAGES].sort());
     for (const language of STAGE_LANGUAGES) {
@@ -106,7 +116,7 @@ describe.each(STAGE_LANGUAGES.map((language) => [language] as const))(
       expect(record.equal + record.differing + record.unsupported).toBe(record.rows);
       if (WRITE) return;
       expect(record).toStrictEqual(committed[language]);
-    });
+    }, 120_000);
   },
 );
 

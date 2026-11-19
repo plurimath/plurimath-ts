@@ -72,8 +72,8 @@ jobs:
 
       - uses: actions/checkout@v5
         with:
-          repository: suleman-uzair/amath-ts
-          ref: 061b19b5cc3aef4458e7bb770dc018beebf4fe87
+          repository: unitsml/amath-ts
+          ref: 876d2ae294fad6f8039e6761b81ce862cb019c35
           path: .stage-deps/amath
       - name: Build pinned amath stage
         run: |
@@ -141,8 +141,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/checkout@v5
         with:
-          repository: suleman-uzair/amath-ts
-          ref: 061b19b5cc3aef4458e7bb770dc018beebf4fe87
+          repository: unitsml/amath-ts
+          ref: 876d2ae294fad6f8039e6761b81ce862cb019c35
           path: .stage-deps/amath
       - uses: actions/checkout@v5
         with:
@@ -303,7 +303,7 @@ jobs:
     # A literal, as in the gems' corpus.yml, so this file fixes the commit; a
     # step checks it against every pin and against the submodule gitlink.
     env:
-      TESTSUITE_COMMIT: 85c7be8fd56f0cc64b4869e74716acc4f0dbe746
+      TESTSUITE_COMMIT: 9767c37a8d7bb21a0694780ecfcbc4f1fbd9eb39
       TESTSUITE: submodules/plurimath-testsuite
       PINS: test/fixtures/testsuite-pins
     steps:
@@ -328,38 +328,10 @@ jobs:
             test "$pinned" = "$TESTSUITE_COMMIT" || { echo "TESTSUITE_COMMIT=$TESTSUITE_COMMIT but $pin has $pinned"; exit 1; }
           done
 
-      - name: Validate every pin with the testsuite's validator
-        run: |
-          for pin in "$PINS"/*.yml; do
-            ruby "$TESTSUITE/scripts/validate-stages.rb" "$TESTSUITE" --pin "$pin"
-          done
-
-      - name: A wrong commit, digest or generation fails the validator
-        run: |
-          mkdir -p tmp/pins
-          tamper() {
-            ruby -ryaml -e '
-              pin = YAML.safe_load_file(ARGV[0])
-              pin[ARGV[1]] = ARGV[1] == "generation" ? Integer(ARGV[2]) : ARGV[2]
-              File.write(ARGV[3], YAML.dump(pin))
-            ' "$1" "$2" "$3" "tmp/pins/$4.yml"
-            if ruby "$TESTSUITE/scripts/validate-stages.rb" "$TESTSUITE" --pin "tmp/pins/$4.yml" > "tmp/pins/$4.log" 2>&1; then
-              echo "the validator accepted $1 with a wrong $2"; exit 1
-            fi
-            # The failure must be the pin's, not some other file's.
-            grep -A2 "FAIL  tmp/pins/$4.yml" "tmp/pins/$4.log" || { cat "tmp/pins/$4.log"; exit 1; }
-            echo "ok: $1 with a wrong $2 rejected"
-          }
-          for pin in "$PINS"/*.yml; do
-            language=$(basename "$pin" .yml)
-            generation=$(ruby -ryaml -e 'puts YAML.safe_load_file(ARGV[0]).fetch("generation")' "$pin")
-            tamper "$pin" commit 0000000000000000000000000000000000000000 "$language-commit"
-            tamper "$pin" snapshot_digest "sha256:$(printf '0%.0s' {1..64})" "$language-digest"
-            tamper "$pin" generation 99 "$language-generation-99"
-            if [ "$generation" -gt 1 ]; then
-              tamper "$pin" generation "$((generation - 1))" "$language-generation-previous"
-            fi
-          done
+      # One validator pass over the testsuite, then the validator's pin check
+      # for every pin and for a wrong commit, digest or generation of each.
+      - name: Validate every pin, and reject wrong ones, with the testsuite's validator
+        run: ruby scripts/check-testsuite-pins.rb "$TESTSUITE" "$PINS" tmp/pins
 
       - uses: pnpm/action-setup@v4
 

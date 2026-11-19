@@ -60,6 +60,33 @@ abort "seed must be a nonempty array of unique strings" unless
 
 sha = ->(path) { Digest::SHA256.file(path).hexdigest }
 
+# Fields the oracle has gained since the commit corpus/census.yaml was measured
+# against. The port models the census, so such a field is dropped from the
+# model when it holds nil and recorded under "projection"; a non-nil value means
+# the input exercises the new field and generation stops instead.
+CENSUS_LAG = { "Math::Function::Uncertainty" => %w[distribution] }.freeze
+
+project = lambda do |value|
+  case value
+  when Hash
+    lagging = value.key?("fields") ? CENSUS_LAG.fetch(value["class"], []) : []
+    value.to_h do |key, inner|
+      next [key, project.call(inner)] unless key == "fields" && !lagging.empty?
+
+      kept = inner.reject do |field, field_value|
+        next false unless lagging.include?(field)
+        abort "#{value["class"]}##{field} is #{field_value.inspect}; the census does not model it" unless
+          field_value.nil?
+
+        true
+      end
+      [key, project.call(kept)]
+    end
+  when Array then value.map { |inner| project.call(inner) }
+  else value
+  end
+end
+
 cases = inputs.map do |input|
   begin
     formula = Plurimath::Math.parse(input, :asciimath)
@@ -67,7 +94,7 @@ cases = inputs.map do |input|
     next { "input" => input, "error" => "parse", "errorClass" => error.class.name }
   end
 
-  row = { "input" => input, "model" => CorpusGenerator.serialize_node(formula, "formula"), "render" => {} }
+  row = { "input" => input, "model" => project.call(CorpusGenerator.serialize_node(formula, "formula")), "render" => {} }
   FORMATS.each do |format|
     row["render"][format] = formula.public_send("to_#{format}")
   rescue StandardError => error
@@ -88,6 +115,8 @@ payload = {
   },
   "ruby" => { "engine" => RUBY_ENGINE, "version" => RUBY_VERSION, "platform" => RUBY_PLATFORM },
   "bundleFrozen" => ENV["BUNDLE_FROZEN"] == "true",
+  "dependencies" => Gem.loaded_specs.slice("unitsml", "mml", "omml").transform_values { |spec| spec.version.to_s },
+  "projection" => CENSUS_LAG.transform_values { |fields| fields.map { |field| "#{field}: nil dropped" } },
   "count" => cases.length,
   "cases" => cases,
   "inputs" => {

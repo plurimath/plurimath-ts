@@ -42,6 +42,7 @@ export class ParseFailed extends Error {
   constructor(
     message: string,
     readonly index: number,
+    readonly furthest: number = index,
   ) {
     super(message);
     this.name = "ParseFailed";
@@ -383,6 +384,7 @@ export abstract class Atom {
     throw new ParseFailed(
       `Failed to match at index ${at}: ${JSON.stringify(input.slice(at, at + 12))}...`,
       at,
+      Math.max(at, ctx.maxPos),
     );
   }
 }

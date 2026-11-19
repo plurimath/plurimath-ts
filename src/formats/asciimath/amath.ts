@@ -8,12 +8,7 @@ import {
   positionAt,
   type StageCapture,
 } from "../../pegkit/stage-captures";
-import {
-  type AsciimathParseOptions,
-  ambiguousUncertaintyComma,
-  transformAsciimathTree,
-  validateOptions,
-} from "./consumer";
+import { type AsciimathParseOptions, transformAsciimathTree, validateOptions } from "./consumer";
 import { preprocess } from "./preprocess";
 
 export type { AsciimathParseOptions } from "./consumer";
@@ -36,7 +31,6 @@ export function createAsciimathParser(
   return (input, options) => {
     validateOptions(options);
     const { text, map } = preprocess(input);
-    ambiguousUncertaintyComma(input, text, options);
     const positions = bytePositions(text);
     let tree: AmathCapture;
     try {

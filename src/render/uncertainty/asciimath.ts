@@ -1,6 +1,7 @@
 /**
  * `Uncertainty#to_asciimath` (`function/uncertainty.rb`, plurimath#493):
- * `ustd(...)`, `uexp(...)` or `ucov(...)`, with a unit as a last
+ * `"ustd(...)"`, `"uexp(...)"` or `"ucov(...)"` (the quoted channel, amath#17),
+ * with a unit as a last
  * `"unitsml(...)"` argument when it can be written as UnitsML, or after the
  * call otherwise.
  */
@@ -53,7 +54,10 @@ export function renderUncertainty(node: NodeOf<"uncertainty">, context: RenderCo
   const unitsml = node.unit === null ? null : asciimathUnitsml(node.unit, context);
   if (unitsml !== null) args.push(`"unitsml(${unitsml})"`);
   const present = args.filter((arg): arg is string => arg !== undefined);
-  const call = `${UNCERTAINTY_ASCIIMATH_NAMES[node.category]}(${present.join(", ")})`;
+  // The quoted channel (amath#17): the call rides asciimath's own string
+  // literal, so the reader's comma and decimal rules inside it are the
+  // channel's, not the locale's.
+  const call = `"${UNCERTAINTY_ASCIIMATH_NAMES[node.category]}(${present.join(", ")})"`;
   if (node.unit === null || unitsml !== null) return call;
   // Not expressible in UnitsML: keep it visible after the call, the only
   // place the AsciiMath reader accepts it.

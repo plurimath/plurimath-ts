@@ -93,7 +93,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: plurimath/umath-ts
-          ref: 6ff33b54fc9e72c445d8efa626ba2ae17bc8c9ec
+          ref: 787840cc71a1e31ac6a2df6873b9dacad4b39241
           path: .stage-deps/umath
       - name: Build pinned umath stage
         run: |
@@ -152,7 +152,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: plurimath/umath-ts
-          ref: 6ff33b54fc9e72c445d8efa626ba2ae17bc8c9ec
+          ref: 787840cc71a1e31ac6a2df6873b9dacad4b39241
           path: .stage-deps/umath
       - uses: actions/checkout@v5
         with:
@@ -342,10 +342,24 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # The unicode typed-model rows replay through umath-ts
+      # (test/replay/umath-stage-replay.spec.ts), at the revision the gates
+      # job builds.
+      - uses: actions/checkout@v5
+        with:
+          repository: plurimath/umath-ts
+          ref: 787840cc71a1e31ac6a2df6873b9dacad4b39241
+          path: .stage-deps/umath
+      - name: Build pinned umath stage
+        run: |
+          npm --prefix .stage-deps/umath install --ignore-scripts
+          npm --prefix .stage-deps/umath run build
+
       # `shell: bash` runs with pipefail, so a failing replay fails the step.
       - name: Replay every row of every pinned generation
         env:
           STAGE_REPLAY_REPORT: ${{ github.workspace }}/tmp/replay/replay-report.json
+          UMATH_TS_DIST: ${{ github.workspace }}/.stage-deps/umath/dist
         run: |
           mkdir -p tmp/replay
           pnpm exec vitest run test/replay 2>&1 | tee tmp/replay/replay.log

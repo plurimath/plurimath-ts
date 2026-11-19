@@ -30,7 +30,10 @@ await leptris.init();
 const parsers = {
   asciimath: createAsciimathParser(await amath.initialize()),
   latex: createLatexParser(await latexmath.initialize()),
-  unicode: createUnicodemathParser(await umath.initialize()),
+  unicode: createUnicodemathParser(
+    await umath.initialize(),
+    readFileSync(new URL("../artifacts/umath.json", pathToFileURL(resolve(entries[2]))), "utf8"),
+  ),
   mathml: createMathmlParser(leptris),
   omml: createOmmlParser(leptris),
 };

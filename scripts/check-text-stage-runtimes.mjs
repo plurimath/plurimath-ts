@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { toAsciimath } from "../dist/asciimath.js";
 import { normalize } from "../dist/core.js";
@@ -38,7 +39,15 @@ for (const [format, modulePath, create, reference, inputs] of [
 ]) {
   if (!modulePath) throw new Error("Pass actual latexmath/umath installed stage entry paths");
   const stage = await import(pathToFileURL(modulePath).href);
-  const parse = create(await stage.initialize());
+  // umath's compiled artifact sits beside its dist/ and gives the mapper the
+  // grammar's capture order.
+  const parse =
+    format === "unicode"
+      ? create(
+          await stage.initialize(),
+          readFileSync(new URL("../artifacts/umath.json", pathToFileURL(modulePath)), "utf8"),
+        )
+      : create(await stage.initialize());
   for (const input of inputs) {
     const actual = parse(input);
     const expected = reference(input);

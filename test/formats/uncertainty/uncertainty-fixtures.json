@@ -17,9 +17,7 @@
     "mml": "2.4.8",
     "omml": "0.2.12"
   },
-  "projection": {
-    "Math::Function::Uncertainty": ["distribution: nil dropped"]
-  },
+  "projection": {},
   "count": 116,
   "cases": [
     {
@@ -5133,6 +5131,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -6650,6 +6649,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -6710,6 +6710,7 @@
                   }
                 },
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -6778,6 +6779,7 @@
                     "value": "0.95"
                   }
                 },
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -6838,6 +6840,7 @@
                     "value": "0.95"
                   }
                 },
+                "distribution": null,
                 "interval_kind": "shortest",
                 "lower": {
                   "class": "Math::Number",
@@ -6898,6 +6901,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -6950,6 +6954,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -7002,6 +7007,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -7054,6 +7060,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -7106,6 +7113,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -7166,6 +7174,7 @@
                   }
                 },
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -7251,6 +7260,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -7303,6 +7313,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -7355,6 +7366,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -7407,6 +7419,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -7459,6 +7472,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -7511,6 +7525,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -7563,6 +7578,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -7636,6 +7652,7 @@
                     "value": "0.950"
                   }
                 },
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -7701,6 +7718,7 @@
                   }
                 },
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -7761,6 +7779,7 @@
                     "value": "0.95"
                   }
                 },
+                "distribution": null,
                 "interval_kind": "shortest",
                 "lower": {
                   "class": "Math::Number",
@@ -7826,6 +7845,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -7878,6 +7898,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -7945,6 +7966,7 @@
                     "category": "standard",
                     "coverage_factor": null,
                     "coverage_probability": null,
+                    "distribution": null,
                     "interval_kind": null,
                     "lower": null,
                     "magnitude": {
@@ -8002,6 +8024,7 @@
                     "category": "standard",
                     "coverage_factor": null,
                     "coverage_probability": null,
+                    "distribution": null,
                     "interval_kind": null,
                     "lower": null,
                     "magnitude": {
@@ -8076,6 +8099,7 @@
                     "value": "0.95"
                   }
                 },
+                "distribution": null,
                 "interval_kind": "probabilistically_symmetric",
                 "lower": {
                   "class": "Math::Number",
@@ -8144,6 +8168,7 @@
                     "value": "0.95"
                   }
                 },
+                "distribution": null,
                 "interval_kind": null,
                 "lower": {
                   "class": "Math::Number",
@@ -8204,6 +8229,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -8256,6 +8282,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -8314,6 +8341,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -8422,6 +8450,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -8494,6 +8523,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -8559,6 +8589,7 @@
                     "value": "0.95"
                   }
                 },
+                "distribution": null,
                 "interval_kind": "shortest",
                 "lower": {
                   "class": "Math::Number",
@@ -8624,6 +8655,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -8655,6 +8687,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -8710,6 +8743,7 @@
                     "category": "standard",
                     "coverage_factor": null,
                     "coverage_probability": null,
+                    "distribution": null,
                     "interval_kind": null,
                     "lower": null,
                     "magnitude": {
@@ -8776,6 +8810,7 @@
                     "category": "standard",
                     "coverage_factor": null,
                     "coverage_probability": null,
+                    "distribution": null,
                     "interval_kind": null,
                     "lower": null,
                     "magnitude": {
@@ -8856,6 +8891,7 @@
                       "category": "standard",
                       "coverage_factor": null,
                       "coverage_probability": null,
+                      "distribution": null,
                       "interval_kind": null,
                       "lower": null,
                       "magnitude": {
@@ -8911,6 +8947,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -8963,6 +9000,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -9015,6 +9053,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -9111,6 +9150,7 @@
                     "value": "0.95"
                   }
                 },
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -9191,6 +9231,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -9287,6 +9328,7 @@
                     "value": "0.95"
                   }
                 },
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -9344,6 +9386,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -9381,6 +9424,7 @@
                 "category": "standard",
                 "coverage_factor": null,
                 "coverage_probability": null,
+                "distribution": null,
                 "interval_kind": null,
                 "lower": null,
                 "magnitude": {
@@ -9442,6 +9486,7 @@
                     "category": "standard",
                     "coverage_factor": null,
                     "coverage_probability": null,
+                    "distribution": null,
                     "interval_kind": null,
                     "lower": null,
                     "magnitude": {
@@ -9499,6 +9544,7 @@
                     "category": "standard",
                     "coverage_factor": null,
                     "coverage_probability": null,
+                    "distribution": null,
                     "interval_kind": null,
                     "lower": null,
                     "magnitude": {
@@ -9583,7 +9629,7 @@
     },
     "generator": {
       "path": "scripts/generate-uncertainty-fixtures.rb",
-      "sha256": "629baf236787f135bd11bc74390311be0972cc07aa2ff37c64757b0d61dc3589"
+      "sha256": "231057e50f1335fd24026f592e5031e198e66beaf3aeb31fd2128c82eb4e4b2c"
     }
   }
 }

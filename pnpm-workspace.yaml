@@ -1,3 +1,3 @@
 # Git-hosted stage packages build their dist with `prepare` on install.
 onlyBuiltDependencies:
-  - "@plurimath/amath-ts@https://codeload.github.com/unitsml/amath-ts/tar.gz/2a967f71be729556d0a358b9c934798ac609ee2b"
+  - "@plurimath/amath-ts@https://codeload.github.com/unitsml/amath-ts/tar.gz/b69d51ba8db5e8d7c423cf8bdc120a97047cdee6"

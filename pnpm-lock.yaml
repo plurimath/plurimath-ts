@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@plurimath/amath-ts':
-        specifier: github:unitsml/amath-ts#876d2ae294fad6f8039e6761b81ce862cb019c35
-        version: https://codeload.github.com/unitsml/amath-ts/tar.gz/876d2ae294fad6f8039e6761b81ce862cb019c35
+        specifier: github:unitsml/amath-ts#2a967f71be729556d0a358b9c934798ac609ee2b
+        version: https://codeload.github.com/unitsml/amath-ts/tar.gz/2a967f71be729556d0a358b9c934798ac609ee2b
       parsanol:
         specifier: 1.5.7
         version: 1.5.7
@@ -465,8 +465,8 @@ packages:
   '@oxc-project/types@0.142.0':
     resolution: {integrity: sha512-7W+2q5AKQVU36fkaryontrHn3YDt1RyUYXatw9i5H8ocYe2sPKSFB6eS8WNPeRKiN1qAWWZUPm7gwFzJGrccqQ==}
 
-  '@plurimath/amath-ts@https://codeload.github.com/unitsml/amath-ts/tar.gz/876d2ae294fad6f8039e6761b81ce862cb019c35':
-    resolution: {gitHosted: true, integrity: sha512-pZc0DAP3Ko0cvbx+H99cg3zMVJMs5bC4uRPouMcEin57HP/D/MtEAihBZ/9gKIaIpLESzab0E0EXzv7f1kgs8g==, tarball: https://codeload.github.com/unitsml/amath-ts/tar.gz/876d2ae294fad6f8039e6761b81ce862cb019c35}
+  '@plurimath/amath-ts@https://codeload.github.com/unitsml/amath-ts/tar.gz/2a967f71be729556d0a358b9c934798ac609ee2b':
+    resolution: {gitHosted: true, integrity: sha512-kVlhRW2WhTpslgPqy0DgfdUhdZvSpNBvHJriUFrlCipVnSaH8quEz5wbGH/FUtKCtnYPYez+2pvhQIBuC/mVFQ==, tarball: https://codeload.github.com/unitsml/amath-ts/tar.gz/2a967f71be729556d0a358b9c934798ac609ee2b}
     version: 0.1.0-alpha.0
     engines: {node: '>=22'}
 
@@ -1966,7 +1966,7 @@ snapshots:
 
   '@oxc-project/types@0.142.0': {}
 
-  '@plurimath/amath-ts@https://codeload.github.com/unitsml/amath-ts/tar.gz/876d2ae294fad6f8039e6761b81ce862cb019c35':
+  '@plurimath/amath-ts@https://codeload.github.com/unitsml/amath-ts/tar.gz/2a967f71be729556d0a358b9c934798ac609ee2b':
     dependencies:
       parsanol: 1.5.7
 

@@ -50,6 +50,7 @@ const run = (command) => {
  */
 const CORE_EXPORTS = [
   "AbsNode",
+  "AnnotationNode",
   "BarNode",
   "BaseNode",
   "BinaryFunctionNode",
@@ -85,6 +86,7 @@ const CORE_EXPORTS = [
   "SqrtNode",
   "SumNode",
   "SymbolNode",
+  "THICK_RSPACE",
   "TableNode",
   "TernaryFunctionNode",
   "TextNode",

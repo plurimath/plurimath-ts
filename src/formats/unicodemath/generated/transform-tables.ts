@@ -3807,6 +3807,55 @@ export const UNICODEMATH_TRANSFORM_NAMED_SYMBOLS: ReadonlyMap<string, string> = 
 ]);
 
 /**
+ * `Constants::MATRIXS` associations for transform lookup.
+ * Grammar alternatives have their own order; never zip them to keys.
+ */
+export const UNICODEMATH_MATRIXS_BY_KEY: ReadonlyMap<string, string> = new Map([
+  ["pmatrix", "&#x24a8;"],
+  ["vmatrix", "&#x24b1;"],
+  ["Vmatrix", "&#x24a9;"],
+  ["bmatrix", "&#x24e2;"],
+  ["Bmatrix", "&#x24c8;"],
+  ["eqarray", "&#x2588;"],
+  ["matrix", "&#x25a0;"],
+  ["cases", "&#x24b8;"],
+]);
+
+/**
+ * `Constants::SUP_DIGITS` associations for transform lookup.
+ * Grammar alternatives have their own order; never zip them to keys.
+ */
+export const UNICODEMATH_SUP_DIGITS_BY_KEY: ReadonlyMap<string, string> = new Map([
+  ["0", "&#x2070;"],
+  ["1", "&#xb9;"],
+  ["2", "&#xb2;"],
+  ["3", "&#xb3;"],
+  ["4", "&#x2074;"],
+  ["5", "&#x2075;"],
+  ["6", "&#x2076;"],
+  ["7", "&#x2077;"],
+  ["8", "&#x2078;"],
+  ["9", "&#x2079;"],
+]);
+
+/**
+ * `Constants::SUB_DIGITS` associations for transform lookup.
+ * Grammar alternatives have their own order; never zip them to keys.
+ */
+export const UNICODEMATH_SUB_DIGITS_BY_KEY: ReadonlyMap<string, string> = new Map([
+  ["0", "&#x2080;"],
+  ["1", "&#x2081;"],
+  ["2", "&#x2082;"],
+  ["3", "&#x2083;"],
+  ["4", "&#x2084;"],
+  ["5", "&#x2085;"],
+  ["6", "&#x2086;"],
+  ["7", "&#x2087;"],
+  ["8", "&#x2088;"],
+  ["9", "&#x2089;"],
+]);
+
+/**
  * `Constants::NARY_CLASSES`: the four n-ary names that resolve to a
  * dedicated `Math::Function` class, mapped to the entity that spells
  * them. The n-ary rules test membership by KEY and invert the hash to

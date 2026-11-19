@@ -1122,6 +1122,14 @@ module UnicodeMathParserDataGenerator
              "Emitted rather than spelled in TypeScript so an upstream rename is\n" \
              "a regeneration diff.",
       ),
+      *%w[MATRIXS SUP_DIGITS SUB_DIGITS].map do |name|
+        CoreDataGenerator.ts_tuple_map(
+          "UNICODEMATH_#{name}_BY_KEY", "ReadonlyMap<string, string>",
+          string_pairs(constants.const_get(name), name),
+          doc: "`Constants::#{name}` associations for transform lookup.\n" \
+               "Grammar alternatives have their own order; never zip them to keys.",
+        )
+      end,
       CoreDataGenerator.ts_tuple_map(
         "UNICODEMATH_NARY_CLASSES", "ReadonlyMap<string, string>", data[:nary_classes],
         doc: "`Constants::NARY_CLASSES`: the four n-ary names that resolve to a\n" \

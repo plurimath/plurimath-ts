@@ -72,7 +72,6 @@ import {
   UNICODEMATH_BINARY_SYMBOLS_KEYS,
   UNICODEMATH_COMBINING_SYMBOLS,
   UNICODEMATH_COMBINING_SYMBOLS_KEYS,
-  UNICODEMATH_MATRIXS,
   UNICODEMATH_MATRIXS_KEYS,
   UNICODEMATH_NARY_SYMBOLS,
   UNICODEMATH_NARY_SYMBOLS_KEYS,
@@ -80,8 +79,6 @@ import {
   UNICODEMATH_RELATIONAL_SYMBOLS_KEYS,
   UNICODEMATH_SKIP_SYMBOLS,
   UNICODEMATH_SKIP_SYMBOLS_KEYS,
-  UNICODEMATH_SUB_DIGITS,
-  UNICODEMATH_SUP_DIGITS,
   UNICODEMATH_UNICODED_FONTS,
 } from "./generated/parser-tables";
 import {
@@ -90,15 +87,18 @@ import {
   UNICODEMATH_FRACTION_PARTS,
   UNICODEMATH_IS_A_CLASSES,
   UNICODEMATH_MASK_CLASSES,
+  UNICODEMATH_MATRIXS_BY_KEY,
   UNICODEMATH_MENCLOSE_FUNCTIONS,
   UNICODEMATH_NARY_CLASSES,
   UNICODEMATH_OVERLAYS_NOTATIONS,
   UNICODEMATH_PHANTOM_FUNCTIONS,
   UNICODEMATH_PRIMES_CONSTANTS,
+  UNICODEMATH_SUB_DIGITS_BY_KEY,
   UNICODEMATH_SUB_OPERATORS_BY_KEY,
   UNICODEMATH_SUB_PARENTHESIS_CLOSE,
   UNICODEMATH_SUB_PARENTHESIS_OPEN,
   UNICODEMATH_SUP_ALPHABETS_BY_KEY,
+  UNICODEMATH_SUP_DIGITS_BY_KEY,
   UNICODEMATH_SUP_OPERATORS_BY_KEY,
   UNICODEMATH_SYMBOL_CLASS_INPUT,
   UNICODEMATH_UNDER_HORIZONTAL_BRACKETS,
@@ -278,26 +278,11 @@ const SKIP_SYMBOLS = zipConstants(
   "SKIP_SYMBOLS",
 );
 
-const MATRIXS_INVERTED = invertFirstWins(
-  zipConstants(UNICODEMATH_MATRIXS_KEYS, UNICODEMATH_MATRIXS, "MATRIXS"),
-);
+const MATRIXS_INVERTED = invertFirstWins(UNICODEMATH_MATRIXS_BY_KEY);
 
-/**
- * `Constants::SUB_DIGITS.key(entity)`, inverted from the ONE generated array:
- * `Constants::SUB_DIGITS` has no separate keys table because its keys are
- * `"0".."9"` in order, and `UNICODEMATH_SUB_DIGITS[i]` is measured to be the
- * entity for digit `i` (`generated/parser-tables.ts`'s own comment: emitted
- * from `Constants::SUB_DIGITS.values`, and Ruby hashes preserve insertion
- * order). `Hash#key` on a miss is nil, so `:2971` needs a not-found case too.
- */
-const SUB_DIGITS_INVERTED = new Map<string, string>(
-  UNICODEMATH_SUB_DIGITS.map((entity, index) => [entity, String(index)]),
-);
-
-/** `Constants::SUP_DIGITS.key(entity)`, inverted the same way, for `:165`. */
-const SUP_DIGITS_INVERTED = new Map<string, string>(
-  UNICODEMATH_SUP_DIGITS.map((entity, index) => [entity, String(index)]),
-);
+/** Constant associations are independent of the grammar's ordered alternatives. */
+const SUB_DIGITS_INVERTED = invertFirstWins(UNICODEMATH_SUB_DIGITS_BY_KEY);
+const SUP_DIGITS_INVERTED = invertFirstWins(UNICODEMATH_SUP_DIGITS_BY_KEY);
 
 function isAFamily(rubyClass: string): ReadonlySet<string> {
   const family = UNICODEMATH_IS_A_CLASSES.get(rubyClass);

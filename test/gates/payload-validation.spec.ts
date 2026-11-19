@@ -110,6 +110,20 @@ const SHA256 = /^[0-9a-f]{64}$/;
 const COMMIT = /^[0-9a-f]{40}$/;
 const IMMUTABLE_REVISION = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
 const FIXTURE_SPECS = {
+  "current-profiles.json": {
+    generator: "scripts/generate-unicodemath-current-profiles.rb",
+    schema: "plurimath-unicodemath-current-profiles/1",
+    rows: "groups",
+    shape: "unicode-current-profiles",
+    usesCorpus: false,
+    usesRenderInventory: false,
+    additionalInputs: [
+      "scripts/generate-unitsml-data.rb",
+      "test/formats/unicodemath/reachability-fixtures.json",
+      "test/formats/unicodemath/scope-gap-fixtures.json",
+      "test/formats/unicodemath/xml-origin-fixtures.json",
+    ],
+  },
   "completion-fixtures.json": {
     generator: "scripts/generate-unitsml-data.rb",
     schema: "plurimath-unicode-probe/1",
@@ -327,6 +341,7 @@ function specFor(relative: string): FixtureSpec {
 }
 
 const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
+  | "current-profiles.json"
   | "completion-fixtures.json"
   | "probe-fixtures.json"
   | "degenerate-fixtures.json"
@@ -1312,6 +1327,65 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
     (_label, record) => {
       expectSidecarEnvelope(record);
       expect(stringField(record.payload, "schema", record.relative)).toBe(record.spec.schema);
+      if (record.spec.shape === "unicode-current-profiles") {
+        const { payload, relative: at } = record;
+        expectExactKeys(
+          payload,
+          ["schema", "oracle", "lockSha256", "historicalInputs", "groups"],
+          at,
+        );
+        expect(stringField(payload, "oracle", at)).toBe(
+          stringField(mapField(record.manifest, "oracle", at), "commit", at),
+        );
+        const dependencies = mapField(record.manifest, "dependencies", at);
+        expect(stringField(payload, "lockSha256", at)).toBe(
+          stringField(mapField(dependencies, "lockfile", at), "sha256", at),
+        );
+        const groups = mapField(payload, "groups", at);
+        const historicalInputs = mapField(payload, "historicalInputs", at);
+        const names = ["reachability", "scope-gap", "xml-origin"];
+        expectExactKeys(groups, names, `${at}.groups`);
+        expectExactKeys(
+          historicalInputs,
+          names.map((name) => `test/formats/unicodemath/${name}-fixtures.json`),
+          `${at}.historicalInputs`,
+        );
+        for (const name of names) {
+          const path = `test/formats/unicodemath/${name}-fixtures.json`;
+          expect(stringField(historicalInputs, path, at)).toBe(sha256OfFile(path));
+          const historical = mapping(JSON.parse(readFileSync(join(REPO_ROOT, path), "utf8")), path);
+          const rows = arrayField(groups, name, at).map((row, index) =>
+            mapping(row, `${at}.groups.${name}[${index}]`),
+          );
+          expect(rows.length).toBeGreaterThan(0);
+          const inputs = rows.map((row) => stringValue(row, "input", at));
+          expect(inputs).toStrictEqual(
+            arrayField(historical, "cases", path).map((row) =>
+              stringValue(mapping(row, path), "input", path),
+            ),
+          );
+          expect(new Set(inputs).size).toBe(rows.length);
+          for (const row of rows) {
+            if (row.raises !== undefined) {
+              expectExactKeys(row, ["input", "raises"], at);
+              expect(stringField(row, "raises", at)).toBe("Plurimath::Math::ParseError");
+            } else {
+              mapping(row.model, `${at}.model`);
+              const formats =
+                name === "scope-gap"
+                  ? ["asciimath", "latex", "mathml", "html", "omml", "unicodemath"]
+                  : [];
+              const keys = formats.map((format) => {
+                const key = format in row ? format : `${format}Error`;
+                stringValue(row, key, at);
+                return key;
+              });
+              expectExactKeys(row, ["input", "model", ...keys], at);
+            }
+          }
+        }
+        return;
+      }
       if (record.spec.shape === "unicode-probe" || record.spec.shape === "unitsml-probe") {
         expectNativeProbe(record);
         return;

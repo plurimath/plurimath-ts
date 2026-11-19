@@ -108,7 +108,7 @@ module MathmlDataGenerator
     classes = math::Function.constants.map { |name| math::Function.const_get(name) }
     classes += math::Function::FontStyle.constants.map { |name| math::Function::FontStyle.const_get(name) }
     classes += [math::Formula, math::Formula::Mrow, math::Formula::Mstyle, math::Number]
-    classes.select { |klass| klass.is_a?(Class) }.uniq.map do |klass|
+    classes.select { |klass| klass.is_a?(Class) && klass < math::Core }.uniq.map do |klass|
       entry = census.fetch(key(klass)) { raise Error, "#{key(klass)} is not in the census" }
       [key(klass), entry["aliases"] || key(klass), entry.fetch("disposition")]
     end.sort
@@ -177,7 +177,7 @@ module MathmlDataGenerator
   def function_rows
     classes = math::Function.constants.map { |name| math::Function.const_get(name) }
     classes += math::Function::FontStyle.constants.map { |name| math::Function::FontStyle.const_get(name) }
-    classes.select { |klass| klass.is_a?(Class) }.uniq.sort_by { |klass| key(klass) }.map do |klass|
+    classes.select { |klass| klass.is_a?(Class) && klass < math::Core }.uniq.sort_by { |klass| key(klass) }.map do |klass|
       default_name = klass.name.split("::").last.downcase
       class_name = klass.instance_method(:class_name).owner == math::Core ? nil : klass.allocate.class_name
       nary = klass.method_defined?(:new_nary_function) ? new_nary_rule(klass) : nil

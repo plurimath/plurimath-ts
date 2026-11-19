@@ -1586,7 +1586,7 @@ export interface UncertaintyInit {
  * standard uncertainty, an expanded uncertainty and its coverage factor, or a
  * coverage interval. Every number is a `Number` holding the text as written.
  *
- * Ruby's `initialize` assigns all ten instance variables, and stores
+ * Ruby's `initialize` assigns all eleven instance variables, and stores
  * `notation` only for the standard category (`nil` otherwise), so the
  * constructor does the same. The gem validates in `initialize`; here, per the
  * module contract, the constructor is permissive and `uncertaintyProblem`

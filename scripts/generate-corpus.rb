@@ -191,6 +191,7 @@ module CorpusGenerator
   FAMILY_ROOTS = %w[
     Math::Formula
     Math::Function::BinaryFunction
+    Math::Function::Semantics::Annotation
     Math::Function::Nary
     Math::Function::Table
     Math::Function::TernaryFunction

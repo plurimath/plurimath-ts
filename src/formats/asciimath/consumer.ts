@@ -1,8 +1,10 @@
 /** Shared consumer policy and Formula mapping; no grammar or runtime loading. */
 import { requireKnownParseOptions } from "../../core/errors";
 import { type FormulaNode, type OnUnsupported, ParseError } from "../../core/index";
+import { isStackOverflow } from "../../core/stack-overflow";
 import { InvalidUncertaintyError } from "../../core/uncertainty";
-import { decimalMarkerFor, type LocaleOptions, requireLocaleKey } from "../../formatting/index";
+import { type LocaleOptions, requireLocaleKey } from "../../formatting/index";
+import { STACK_EXHAUSTED_MESSAGE } from "../../pegkit/atom";
 import type { ParseValue } from "../../pegkit/index";
 import { asciimathTransform, finalizeAsciimathParse } from "./transform";
 
@@ -48,6 +50,11 @@ export function transformAsciimathTree(tree: ParseValue, input: string): Formula
       // Inline UnitsML construction fails at Math.parse's outer boundary.
       // The reference carries no position for this transform failure.
       throw new ParseError(error.message, input, "asciimath", 0);
+    }
+    if (isStackOverflow(error)) {
+      // A flat run the stage accepts can still nest too deep for the
+      // recursive transform; refuse it typed, as the in-tree grammar did.
+      throw new ParseError(STACK_EXHAUSTED_MESSAGE, input, "asciimath", 0);
     }
     throw error;
   }

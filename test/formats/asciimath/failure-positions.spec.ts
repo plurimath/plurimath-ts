@@ -11,9 +11,8 @@
  * recorded in the fixture but are not compared: message text is not API
  * (ARCHITECTURE.md §5).
  *
- * The port's grammar is a port of the pre-amath Parslet grammar. Both report
- * the deepest leaf of the root's failure cause, so the positions agree even
- * where the two grammars are shaped differently. Each disagreement would be
+ * The port parses through amath-ts, the TypeScript build of the same amath
+ * grammar, and both count the refusal in characters. Each disagreement would be
  * listed in `KNOWN_PARITY_GAPS` with its kind, and the list is asserted
  * exactly: a gap that closes, or a new one, fails here.
  */
@@ -22,8 +21,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { createAsciimathGrammar } from "../../../src/formats/asciimath/grammar";
-import { ParseFailed } from "../../../src/pegkit/index";
+import { asciimathStage } from "../../../src/formats/asciimath/stage";
 
 interface FixtureCase {
   readonly id: string;
@@ -49,11 +47,6 @@ const fixture = JSON.parse(
   ),
 ) as Fixture;
 
-const grammar = createAsciimathGrammar();
-const root = (grammar.rules as unknown as Record<string, { parse(input: string): unknown }>)[
-  fixture.rule
-];
-
 /**
  * Root-level disagreements between the port and the oracle, by input.
  * `verdict`: one side accepts what the other refuses. `offset`: both refuse,
@@ -64,19 +57,14 @@ const KNOWN_PARITY_GAPS: Readonly<Record<string, "verdict" | "offset">> = {};
 /** The gap count, pinned so a change to the list is a visible decision. */
 const KNOWN_PARITY_GAP_COUNT = 0;
 
-/** amath counts characters (code points); `ParseFailed.index` counts UTF-16 code units. */
-function utf16Offset(input: string, characters: number): number {
-  return [...input].slice(0, characters).join("").length;
-}
-
-/** The port's verdict: `null` when the root consumed the whole input. */
+/** The port's verdict, in characters: `null` when the stage accepted the whole input. */
 function portFailure(input: string): number | null {
-  if (root === undefined) throw new Error(`the port has no rule ${fixture.rule}`);
   try {
-    root.parse(input);
+    asciimathStage().parseTree(input);
     return null;
   } catch (error) {
-    if (error instanceof ParseFailed) return error.index;
+    const at = (error as { charOffset?: unknown }).charOffset;
+    if (typeof at === "number") return at;
     throw error;
   }
 }
@@ -85,7 +73,7 @@ function gap(c: FixtureCase): "verdict" | "offset" | null {
   const index = portFailure(c.input);
   if ((index === null) !== c.accepts) return "verdict";
   if (index === null || c.index === undefined) return null;
-  return index === utf16Offset(c.input, c.index) ? null : "offset";
+  return index === c.index ? null : "offset";
 }
 
 describe("the root failure-position fixture", () => {

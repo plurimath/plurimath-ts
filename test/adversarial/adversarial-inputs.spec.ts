@@ -147,13 +147,14 @@ const CASES: ReadonlyArray<readonly [string, string, Outcome]> = [
   ["fences: 5,000 unmatched open", `${"(".repeat(5000)}x`, "PARSE_ERROR"],
   ["fences: 2,000 unmatched close", `x${")".repeat(2000)}`, "parsed"],
   ["fences: alternating unmatched", "(x)) ((y) {: z", "parsed"],
-  // 250, not 500: the transition sits at 625-650 symbols and is *stack*
-  // exhaustion, so it moves with the engine's stack size. A pin at 500 would
-  // fail on a runtime with a slightly smaller stack and no parser regression.
+  // The in-tree grammar ran out of stack at 625-650 symbols. The amath
+  // stage parses a chain as a repetition, not by recursion, so 5,000 symbols
+  // and 2,000 superscripts now parse (measured 2026-11-19, amath-ts on
+  // Node 24). 20,000 characters still exhaust the transform's stack.
   ["tokens: 250 symbols", Array.from({ length: 250 }, () => "a").join(" "), "parsed"],
-  ["tokens: 5,000 symbols", Array.from({ length: 5000 }, () => "a").join(" "), "PARSE_ERROR"],
+  ["tokens: 5,000 symbols", Array.from({ length: 5000 }, () => "a").join(" "), "parsed"],
   ["tokens: 5,000 digits, no spaces", "1".repeat(5000), "parsed"],
-  ["tokens: 2,000 superscripts", `x${"^y".repeat(2000)}`, "PARSE_ERROR"],
+  ["tokens: 2,000 superscripts", `x${"^y".repeat(2000)}`, "parsed"],
   ["tokens: 20,000 characters of one symbol", "a".repeat(20000), "PARSE_ERROR"],
   ["whitespace only", "   ", "RENDER_ERROR"],
 ];
@@ -167,24 +168,31 @@ const SLOWEST_ALLOWED_MS = 20_000;
 describe("every adversarial input reaches the clean outcome it is pinned to", () => {
   const seen: Outcome[] = [];
 
-  it.each(CASES)("%s", (label, input, expected) => {
-    const started = performance.now();
-    const outcome = outcomeOf(input);
-    const elapsed = performance.now() - started;
-    seen.push(outcome);
-    expect(outcome).toBe(expected);
-    // **This does not bound a hang, and an earlier version of this comment
-    // wrongly claimed it did.** `outcomeOf` is synchronous, so a non-returning
-    // loop inside it blocks the very event loop that would have to fire
-    // vitest's timeout: the runner would hang, not fail. Only CI's job timeout
-    // catches that.
-    //
-    // What this *does* catch is the realistic regression — parse time going
-    // superlinear. Every case here was measured under 2s; the ceiling is set
-    // far above that so ordinary machine noise cannot trip it, while a
-    // quadratic blowup on these sizes would be nowhere near it.
-    expect(elapsed, `${label} took ${Math.round(elapsed)}ms`).toBeLessThan(SLOWEST_ALLOWED_MS);
-  });
+  it.each(CASES)(
+    "%s",
+    (label, input, expected) => {
+      const started = performance.now();
+      const outcome = outcomeOf(input);
+      const elapsed = performance.now() - started;
+      seen.push(outcome);
+      expect(outcome).toBe(expected);
+      // **This does not bound a hang, and an earlier version of this comment
+      // wrongly claimed it did.** `outcomeOf` is synchronous, so a non-returning
+      // loop inside it blocks the very event loop that would have to fire
+      // vitest's timeout: the runner would hang, not fail. Only CI's job timeout
+      // catches that.
+      //
+      // What this *does* catch is the realistic regression — parse time going
+      // superlinear. Every case here was measured under 2s; the ceiling is set
+      // far above that so ordinary machine noise cannot trip it, while a
+      // quadratic blowup on these sizes would be nowhere near it. Through the
+      // amath stage, 20,000 characters of one symbol took 5-11s on a loaded
+      // 8-core laptop (2026-11-19), so the test gets the same ceiling as its
+      // timeout instead of vitest's 5s default.
+      expect(elapsed, `${label} took ${Math.round(elapsed)}ms`).toBeLessThan(SLOWEST_ALLOWED_MS);
+    },
+    SLOWEST_ALLOWED_MS,
+  );
 
   it("exercised every case", () => {
     expect(CASES.length).toBeGreaterThan(0);
@@ -304,27 +312,33 @@ describe("deep input is refused by a guard that says which guard it was", () => 
     }
   }
 
-  it("refuses every rejected shape through a typed depth guard, whichever one wins the race", () => {
-    // NOT which specific guard fires: measured directly (2026-09-23) across
-    // Node 20.20.2/22.23.2/24.18.0, every row here is the stack guard
-    // (`STACK_EXHAUSTED_MESSAGE`) under vitest's default `forks` pool — but
-    // under `--pool=threads`, the SAME build on the SAME three Node versions,
-    // some flip to the depth cap (`DEPTH_LIMIT_MESSAGE`) instead. A
-    // `worker_threads` worker's usable JS stack measured roughly 4x deeper
-    // than a forked child's on this machine (~50k vs ~13k plain-recursion
-    // frames — `test/pegkit/depth-limit.spec.ts`'s header), which moves
-    // `MAX_DEPTH` (20,000) from "always loses the race" to "sometimes wins
-    // it" for these specific rows. Both are the same clean, typed refusal
-    // (`guardFor` enforces `ParseError`/`PARSE_ERROR` above); this pins that
-    // invariant, driven off the table so a row that stops refusing at all —
-    // or starts throwing something untyped — still fails here.
-    const rejecting = CASES.filter(([, , expected]) => expected === "PARSE_ERROR");
-    expect(rejecting.length).toBeGreaterThan(0);
-    for (const [label, input] of rejecting) {
-      const message = guardFor(input);
-      expect(DEPTH_REFUSAL_MESSAGES.has(message), `${label}: got "${message}"`).toBe(true);
-    }
-  });
+  it(
+    "refuses every rejected shape through a typed depth guard, whichever one wins the race",
+    () => {
+      // NOT which specific guard fires: measured directly (2026-09-23) across
+      // Node 20.20.2/22.23.2/24.18.0, every row here is the stack guard
+      // (`STACK_EXHAUSTED_MESSAGE`) under vitest's default `forks` pool — but
+      // under `--pool=threads`, the SAME build on the SAME three Node versions,
+      // some flip to the depth cap (`DEPTH_LIMIT_MESSAGE`) instead. A
+      // `worker_threads` worker's usable JS stack measured roughly 4x deeper
+      // than a forked child's on this machine (~50k vs ~13k plain-recursion
+      // frames — `test/pegkit/depth-limit.spec.ts`'s header), which moves
+      // `MAX_DEPTH` (20,000) from "always loses the race" to "sometimes wins
+      // it" for these specific rows. Both are the same clean, typed refusal
+      // (`guardFor` enforces `ParseError`/`PARSE_ERROR` above); this pins that
+      // invariant, driven off the table so a row that stops refusing at all —
+      // or starts throwing something untyped — still fails here. The 20,000
+      // character row is among these rows, so this test gets the same
+      // SLOWEST_ALLOWED_MS timeout as the timed loop above.
+      const rejecting = CASES.filter(([, , expected]) => expected === "PARSE_ERROR");
+      expect(rejecting.length).toBeGreaterThan(0);
+      for (const [label, input] of rejecting) {
+        const message = guardFor(input);
+        expect(DEPTH_REFUSAL_MESSAGES.has(message), `${label}: got "${message}"`).toBe(true);
+      }
+    },
+    SLOWEST_ALLOWED_MS,
+  );
 
   it("does not relabel an unrelated RangeError as stack exhaustion", () => {
     // The fallback used to catch every `RangeError`. `RangeError` is a

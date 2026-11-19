@@ -412,8 +412,8 @@ const parseAsciimath = createAsciimathParser(await initialize());
 console.log(toLatex(parseAsciimath("x^2")));
 ```
 
-The optional stage package must be available separately. Its browser binding can
-be supplied through the same factory after browser runtime initialization.
+`parseAsciimath` itself parses through the same stage on Node, building it on
+first use. In a browser, initialize the stage first and use this factory.
 
 ### Initialized HTML PARG parser
 

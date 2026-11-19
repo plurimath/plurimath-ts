@@ -282,12 +282,7 @@ const FORBIDDEN = {
     LOCALE_GROUPS,
     /formats\/unicodemath\/grammar\.ts$/,
   ],
-  "./asciimath/amath": [
-    ...forbidOtherFormats("asciimath"),
-    /xml\//,
-    LOCALE_GROUPS,
-    /formats\/asciimath\/grammar\.ts$/,
-  ],
+  "./asciimath/amath": [...forbidOtherFormats("asciimath"), /xml\//, LOCALE_GROUPS],
   // HTML parses as well as renders, so pegkit is expected here; `xml` still
   // is not, because the HTML renderer builds its markup as strings rather
   // than through the XML layer.
@@ -494,6 +489,10 @@ for (const [subpath, conditions] of subpaths) {
         write: false,
         format,
         platform: "neutral",
+        // Host builtins are not package sources. parsanol's Node runtime (the
+        // AsciiMath stage's default) imports them, and a neutral bundle cannot
+        // resolve them; left external they ship no bytes to inspect.
+        external: ["node:*"],
         metafile: true,
         logLevel: "silent",
       });
@@ -534,6 +533,7 @@ for (const [subpath, conditions] of subpaths) {
         // analysed here; otherwise an unmapped chunk could hide a forbidden
         // module and this check would go quiet exactly where it matters.
         const unanalysed = (inputs[chunk].imports ?? [])
+          .filter((entry) => !entry.external)
           .map((entry) => entry.path)
           .filter((path) => !analysed.has(path));
         if (unanalysed.length > 0) {

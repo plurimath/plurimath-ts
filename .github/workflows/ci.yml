@@ -73,7 +73,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: unitsml/amath-ts
-          ref: 876d2ae294fad6f8039e6761b81ce862cb019c35
+          ref: b69d51ba8db5e8d7c423cf8bdc120a97047cdee6
           path: .stage-deps/amath
       - name: Build pinned amath stage
         run: |
@@ -142,7 +142,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: unitsml/amath-ts
-          ref: 876d2ae294fad6f8039e6761b81ce862cb019c35
+          ref: b69d51ba8db5e8d7c423cf8bdc120a97047cdee6
           path: .stage-deps/amath
       - uses: actions/checkout@v5
         with:

@@ -221,5 +221,9 @@
     "tsdown": "0.22.14",
     "typescript": "^7.0.0",
     "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "@plurimath/amath-ts": "github:unitsml/amath-ts#b69d51ba8db5e8d7c423cf8bdc120a97047cdee6",
+    "parsanol": "1.5.7"
   }
 }

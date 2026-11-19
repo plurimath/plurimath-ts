@@ -8,11 +8,9 @@ function censusFields(expression: string): unknown {
     begin
     require "json"
     require "tmpdir"
-    generator = ${JSON.stringify(join(REPO_ROOT, "scripts", "generate-corpus.rb"))}
+    helper = ${JSON.stringify(join(REPO_ROOT, "scripts", "oracle-model-fields.rb"))}
     # Class-B tests exercise discovery without loading an oracle bundle.
-    module Parslet; end
-    source = File.read(generator).sub('require "plurimath"', '')
-    eval(source, TOPLEVEL_BINDING, generator)
+    require helper
     Dir.mktmpdir do |dir|
       core = File.join(dir, "core.rb")
       File.write(core, <<~'RUBY')
@@ -66,7 +64,7 @@ function censusFields(expression: string): unknown {
 
 describe("oracle census fields declared by node_fields", () => {
   it("discovers node, symbol and scalar fields without assigned ivars", () => {
-    expect(censusFields("CorpusGenerator.declared_fields(Annotation)")).toEqual([
+    expect(censusFields("OracleModelFields.declared_fields(Annotation)")).toEqual([
       "content",
       "enabled",
       "tag",
@@ -74,27 +72,27 @@ describe("oracle census fields declared by node_fields", () => {
   });
 
   it("keeps inherited fields and mapping views out of own declarations", () => {
-    expect(censusFields("CorpusGenerator.node_field_declarations(Annotation)")).toEqual([
+    expect(censusFields("OracleModelFields.declared_fields(Annotation)")).toEqual([
       "content",
       "enabled",
       "tag",
     ]);
-    expect(censusFields("CorpusGenerator.declared_fields(Parent)")).toEqual([
+    expect(censusFields("OracleModelFields.declared_fields(Parent)")).toEqual([
       "inherited_flag",
       "value",
     ]);
   });
 
-  it("retains legacy source discovery and excludes framework ivars", () => {
-    expect(censusFields("CorpusGenerator.declared_fields(Legacy)")).toEqual(["label", "value"]);
+  it("leaves ordinary source declarations to the existing scanner", () => {
+    expect(censusFields("OracleModelFields.declared_fields(Legacy)")).toEqual([]);
   });
 
   it("still handles oracles from before node_fields existed", () => {
     expect(
       censusFields(`begin
         Plurimath::Math::Core.singleton_class.remove_method(:node_fields)
-        CorpusGenerator.declared_fields(Legacy)
+        OracleModelFields.declared_fields(Legacy)
       end`),
-    ).toEqual(["label", "value"]);
+    ).toEqual([]);
   });
 });

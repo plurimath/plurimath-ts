@@ -192,7 +192,6 @@ module CorpusGenerator
     Math::Formula
     Math::Function::BinaryFunction
     Math::Function::Nary
-    Math::Function::Semantics::Annotation
     Math::Function::Table
     Math::Function::TernaryFunction
     Math::Function::Uncertainty
@@ -989,31 +988,8 @@ module CorpusGenerator
     source_body(location.first, location.last - 1)
   end
 
-  # node_fields creates Ruby accessors in Core and scalar Lutaml attributes.
-  # Their declarations need not contain a literal @ivar or attr_accessor in
-  # the model source. Read the runtime declarations, keeping mapping views
-  # (__value_node etc.) and framework state out of the model field list.
-  def node_field_declarations(klass)
-    core = Plurimath::Math::Core
-    return [] unless core.respond_to?(:node_fields)
-
-    core_source = core.method(:node_fields).source_location&.first
-    accessors = klass.instance_methods(false).filter_map do |name|
-      field = name.to_s
-      next unless field.match?(/\A[a-z][a-z_0-9]*\z/)
-      next unless klass.instance_methods(false).include?(:"#{field}=")
-      next unless klass.instance_method(name).source_location&.first == core_source
-
-      field
-    end
-    attributes = klass.attributes.keys.map(&:to_s)
-    inherited = klass.superclass.attributes.keys.map(&:to_s)
-    scalars = (attributes - inherited).reject { |name| name.start_with?("__") }
-    (accessors + scalars).uniq.sort
-  end
-
   def declared_fields(klass)
-    fields = node_field_declarations(klass)
+    fields = []
     body = class_body(klass)
     collecting = false
 

@@ -5786,8 +5786,7 @@ module CorpusGenerator
          "#{exclusions.length} withheld, #{census['summary']['total']} classes censused"
     probe = symbols["probe"]
     puts "#{symbols['static'].length} symbols across #{SYMBOL_FORMATS.join(', ')}; " \
-         "#{symbols['tables']['counts']['merged']} inputs, " \
-         "#{symbols['tables']['counts']['literals']} literals"
+         "#{symbols['tables']['counts']['merged']} inputs"
     tag_names = symbols["omml_tag_names"]
     puts "omml_tag_name: default #{tag_names['default']}, " \
          "#{tag_names['overrides'].length} override(s) — " \
@@ -5795,8 +5794,6 @@ module CorpusGenerator
     fenced_parens = symbols["html_fenced_parens"]
     puts "html fenced paren payloads: #{fenced_parens['entries'].length} Paren subclass(es), " \
          "#{fenced_parens['divergent']} differing from Paren#to_html"
-    puts "grammar tables: " \
-         "#{symbols['grammar']['counts'].map { |name, count| "#{name} #{count}" }.join(', ')}"
     puts "transform registry: " \
          "#{registry['counts'].map { |name, count| "#{name} #{count}" }.join(', ')}"
     puts "render tables: " \

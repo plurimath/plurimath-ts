@@ -32,6 +32,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { PINNED_CORPUS_ROOT, REPO_ROOT } from "../core/corpus-pin";
+import { missingStagePackage, stageOutcomes } from "./stage-packages";
 import {
   loadStageGeneration,
   pinPath,
@@ -106,17 +107,26 @@ describe.each(STAGE_LANGUAGES.map((language) => [language] as const))(
       expect(generation.latest).toBe(true);
     });
 
-    it(`replays all ${generation.rows} rows as stage-replay.record.json records`, () => {
-      const results = replayGeneration(generation);
-      expect(results).toHaveLength(generation.rows);
-      expect(new Set(results.map((row) => row.id)).size).toBe(generation.rows);
-      const record = summarize(generation, results);
-      written[language] = record;
-      rows[language] = results;
-      expect(record.equal + record.differing + record.unsupported).toBe(record.rows);
-      if (WRITE) return;
-      expect(record).toStrictEqual(committed[language]);
-    }, 120_000);
+    // The latex, unicode, mathml and omml model rows replay through their
+    // stage packages (`stage-packages.ts`); without one the record cannot
+    // match, so the check waits for CI, which builds them all.
+    const missing = missingStagePackage(language);
+    it.skipIf(missing !== undefined && !WRITE)(
+      `replays all ${generation.rows} rows as stage-replay.record.json records${missing ? ` (needs ${missing})` : ""}`,
+      async () => {
+        if (WRITE && missing !== undefined) throw new Error(`STAGE_REPLAY_WRITE needs ${missing}`);
+        const results = replayGeneration(generation, await stageOutcomes(generation));
+        expect(results).toHaveLength(generation.rows);
+        expect(new Set(results.map((row) => row.id)).size).toBe(generation.rows);
+        const record = summarize(generation, results);
+        written[language] = record;
+        rows[language] = results;
+        expect(record.equal + record.differing + record.unsupported).toBe(record.rows);
+        if (WRITE) return;
+        expect(record).toStrictEqual(committed[language]);
+      },
+      900_000,
+    );
   },
 );
 

@@ -30,11 +30,13 @@
  *     `ParseError` at the recorded byte offset;
  *   - stage typed-model rows: a refusal must be a `ParseError` from the
  *     port's parser at the recorded byte offset. An AsciiMath model must be
- *     amath-ts's typed model, field for field; other stages' models are
- *     unsupported: they are the stage gems' own typed models;
+ *     amath-ts's typed model, field for field. A LaTeX or UnicodeMath model
+ *     is the stage gem's own typed model, which the port does not build: it
+ *     is replayed through latexmath-ts or umath-ts (`stage-packages.ts`);
  *   - stage model-roundtrip rows (mathml, omml): a refusal must be a
- *     `ParseError`. A model and its `to_xml` bytes are unsupported: they are
- *     the `mml`/`omml` gems' lutaml models and serializers;
+ *     `ParseError`. A model and its `to_xml` bytes are the `mml`/`omml`
+ *     gems' lutaml models and serializers, which the port does not have:
+ *     they are replayed through mml-ts or omml-ts (`stage-packages.ts`);
  *   - roundtrip rows (`plurimath-stage/roundtrip/1`): the source is parsed,
  *     rendered to each target and read back; every `output` must be
  *     byte-identical and every `lossless` must be what the port observes
@@ -70,6 +72,7 @@ import type { ParseValue } from "../../src/pegkit/index";
 import { ParseFailed, Slice } from "../../src/pegkit/index";
 import { type PinnedCall, readCorpusPayload } from "../core/corpus-pin";
 import type { YamlValue } from "../core/corpus-yaml";
+import type { StageOutcomes } from "./stage-packages";
 import {
   asMapping,
   asString,
@@ -544,12 +547,18 @@ const TYPED_MODELS: Partial<Record<StageLanguage, (input: string, options: Mappi
       amathModelTree(asciimathStage().parse(input, { decimal: options.decimal as Decimal })),
   };
 
-function replayTypedModel(language: StageLanguage, entry: Mapping): Outcome {
+function replayTypedModel(
+  language: StageLanguage,
+  entry: Mapping,
+  stage: StageOutcomes | undefined,
+): Outcome {
   const expected = asMapping(entry.expected, "expected");
   const input = taggedString(entry.input, "input");
   if (expected.refusal === undefined) {
     const build = TYPED_MODELS[language];
     if (build === undefined) {
+      const replayed = stage?.get(asString(entry.id, "id"));
+      if (replayed !== undefined) return replayed;
       return unsupported(TYPED_MODEL_REASON[language] ?? `typed-model rows for ${language}`);
     }
     const run = attempt(() => build(input, asMapping(entry.options ?? {}, "options")));
@@ -565,9 +574,15 @@ function replayTypedModel(language: StageLanguage, entry: Mapping): Outcome {
   return compareRefusal(language, "input", refusal, input, options, run.thrown);
 }
 
-function replayModelRoundtrip(language: StageLanguage, entry: Mapping): Outcome {
+function replayModelRoundtrip(
+  language: StageLanguage,
+  entry: Mapping,
+  stage: StageOutcomes | undefined,
+): Outcome {
   const expected = asMapping(entry.expected, "expected");
   if (expected.refusal === undefined) {
+    const replayed = stage?.get(asString(entry.id, "id"));
+    if (replayed !== undefined) return replayed;
     return unsupported(MODEL_ROUNDTRIP_REASON[language] ?? `model-roundtrip rows for ${language}`);
   }
   const input = taggedString(entry.input, "input");
@@ -651,7 +666,11 @@ function stageKind(payload: StagePayload): RowKind {
   throw new Error(`${payload.path}: boundary ${boundary} is not one this replay knows`);
 }
 
-function replayStage(language: StageLanguage, payload: StagePayload): RowResult[] {
+function replayStage(
+  language: StageLanguage,
+  payload: StagePayload,
+  stage: StageOutcomes | undefined,
+): RowResult[] {
   const kind = stageKind(payload);
   return payload.cases.map((entry) => {
     const id = asString(entry.id, `${payload.path} id`);
@@ -662,10 +681,10 @@ function replayStage(language: StageLanguage, payload: StagePayload): RowResult[
           outcome = replayRawTree(language, entry);
           break;
         case "typed-model":
-          outcome = replayTypedModel(language, entry);
+          outcome = replayTypedModel(language, entry, stage);
           break;
         case "model-roundtrip":
-          outcome = replayModelRoundtrip(language, entry);
+          outcome = replayModelRoundtrip(language, entry, stage);
           break;
         default:
           outcome = replayRoundtrip(entry);
@@ -697,14 +716,14 @@ function classifySupersessions(results: RowResult[]): RowResult[] {
 }
 
 /** Every row of the generation, in payload then file order. */
-export function replayGeneration(generation: StageGeneration): RowResult[] {
-  return classifySupersessions(replayRows(generation));
+export function replayGeneration(generation: StageGeneration, stage?: StageOutcomes): RowResult[] {
+  return classifySupersessions(replayRows(generation, stage));
 }
 
-function replayRows(generation: StageGeneration): RowResult[] {
+function replayRows(generation: StageGeneration, stage: StageOutcomes | undefined): RowResult[] {
   const language = generation.pin.language;
   return generation.payloads.flatMap((payload) => {
-    if (STAGE_SCHEMA.test(payload.schema)) return replayStage(language, payload);
+    if (STAGE_SCHEMA.test(payload.schema)) return replayStage(language, payload, stage);
     const legacy = replayLegacy(payload);
     if (legacy === undefined) {
       throw new Error(`${payload.path}: schema ${payload.schema} is not one this replay knows`);

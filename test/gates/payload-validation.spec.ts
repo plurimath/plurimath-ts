@@ -2328,11 +2328,16 @@ describe("top-level corpus manifests carry the manifest/2 shape", () => {
       expect(arrayField(manifest, "warnings", at)).toStrictEqual([]);
 
       const generator = mapField(manifest, "generator", at);
-      expectExactKeys(generator, ["path", "sha256", "repository"], `${at}.generator`);
+      expectExactKeys(generator, ["path", "sha256", "repository", "inputs"], `${at}.generator`);
       expect(stringField(generator, "path", `${at}.generator`)).toBe("scripts/generate-corpus.rb");
       const generatorSha256 = stringField(generator, "sha256", `${at}.generator`);
       expect(generatorSha256).toMatch(SHA256);
       expect(sha256OfFile("scripts/generate-corpus.rb")).toBe(generatorSha256);
+      const helperInputs = mapField(generator, "inputs", `${at}.generator`);
+      expectExactKeys(helperInputs, ["scripts/oracle-model-fields.rb"], `${at}.generator.inputs`);
+      expect(stringField(helperInputs, "scripts/oracle-model-fields.rb", at)).toBe(
+        sha256OfFile("scripts/oracle-model-fields.rb"),
+      );
       const generatorRepository = mapField(generator, "repository", `${at}.generator`);
       expectExactKeys(
         generatorRepository,

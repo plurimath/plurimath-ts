@@ -27,6 +27,7 @@
 
 import {
   AbsNode,
+  AnnotationNode,
   BarNode,
   BaseNode,
   BinaryFunctionNode,
@@ -115,6 +116,7 @@ export interface UnicodemathClassEntry {
 export const UNICODEMATH_NODE_CONSTRUCTORS: {
   readonly [K in NodeKind]: UnicodemathNodeConstructor;
 } = {
+  annotation: AnnotationNode,
   abs: AbsNode,
   bar: BarNode,
   base: BaseNode,

@@ -29,6 +29,7 @@
 
 import {
   AbsNode,
+  AnnotationNode,
   BarNode,
   BaseNode,
   BinaryFunctionNode,
@@ -122,6 +123,7 @@ export interface LatexClassEntry {
  * layer 1.
  */
 export const LATEX_NODE_CONSTRUCTORS: { readonly [K in NodeKind]: LatexNodeConstructor } = {
+  annotation: AnnotationNode,
   abs: AbsNode,
   bar: BarNode,
   base: BaseNode,

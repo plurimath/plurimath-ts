@@ -14,8 +14,8 @@ require "thread"
 $stdout.sync = true
 
 module OracleArtifacts
-  PIN = "2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256"
-  LOCK_SHA = "6051573ea50bb473fb12ccacb4e2ca48d5e06b9dce0dff6d2647042e76f48ebd"
+  PIN = "1a3033d0881d6c6ba655ab3ce00e0dc3cccfe5b4"
+  LOCK_SHA = "f96dc6cd975477125156e67e1e9254993dc0dd6dc4ce517dd60b42d711d2a906"
   ROOTS = %w[corpus src/unitsml/generated src/generated src/core/generated src/formatting/generated
              src/formats/html/generated src/formats/latex/generated
              src/formats/mathml/generated src/formats/omml/generated

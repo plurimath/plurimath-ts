@@ -9,8 +9,8 @@ require "optparse"
 require "tmpdir"
 
 module NativeCompletionReference
-  PIN = "2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256"
-  LOCK_SHA = "6051573ea50bb473fb12ccacb4e2ca48d5e06b9dce0dff6d2647042e76f48ebd"
+  PIN = "1a3033d0881d6c6ba655ab3ce00e0dc3cccfe5b4"
+  LOCK_SHA = "f96dc6cd975477125156e67e1e9254993dc0dd6dc4ce517dd60b42d711d2a906"
   module_function
 
   def git(root, *args)
@@ -36,7 +36,7 @@ module NativeCompletionReference
     require "unitsdb"
     require_relative "generate-corpus"
     raise "wrong loaded oracle" unless Gem.loaded_specs.fetch("plurimath").full_gem_path == File.realpath(oracle)
-    raise "wrong dependency versions" unless Gem.loaded_specs.fetch("unitsml").version.to_s == "0.6.13" && Gem.loaded_specs.fetch("unitsdb").version.to_s == "2.2.13"
+    raise "wrong dependency versions" unless Gem.loaded_specs.fetch("unitsml").version.to_s == "0.6.14" && Gem.loaded_specs.fetch("unitsdb").version.to_s == "2.2.15"
   end
 
   def measured(input, options = {})

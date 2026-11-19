@@ -409,7 +409,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: plurimath/plurimath
-          ref: 2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256
+          ref: 1a3033d0881d6c6ba655ab3ce00e0dc3cccfe5b4
           path: oracle
           persist-credentials: false
 
@@ -519,7 +519,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: plurimath/plurimath
-          ref: 2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256
+          ref: 1a3033d0881d6c6ba655ab3ce00e0dc3cccfe5b4
           path: oracle
           persist-credentials: false
       - name: Prepare frozen oracle bundle

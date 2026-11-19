@@ -157,6 +157,7 @@ function everyKindNarrows(node: MathNode): string {
       return `${node.name ?? "Table"}/${String(node.openParen)}`;
     case "formula":
       return `formula(${node.value?.length ?? 0})`;
+    case "annotation":
     case "abs":
     case "bar":
     case "base":

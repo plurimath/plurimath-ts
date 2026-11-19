@@ -31,6 +31,7 @@
 
 import {
   AbsNode,
+  AnnotationNode,
   BarNode,
   BaseNode,
   BinaryFunctionNode,
@@ -122,6 +123,7 @@ export interface HtmlClassEntry {
  * layer 1.
  */
 export const HTML_NODE_CONSTRUCTORS: { readonly [K in NodeKind]: HtmlNodeConstructor } = {
+  annotation: AnnotationNode,
   abs: AbsNode,
   bar: BarNode,
   base: BaseNode,

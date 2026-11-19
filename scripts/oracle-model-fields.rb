@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
-# Runtime field discovery for the Lutaml-backed oracle model. Kept separate
-# until the generators can regenerate all payloads against the newer oracle.
+# Runtime field discovery for the Lutaml-backed oracle model.
 module OracleModelFields
   module_function
 

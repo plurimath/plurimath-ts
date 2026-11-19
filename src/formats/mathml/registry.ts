@@ -11,6 +11,7 @@
 
 import {
   AbsNode,
+  AnnotationNode,
   BarNode,
   BaseNode,
   BinaryFunctionNode,
@@ -61,6 +62,7 @@ export type MathmlNodeConstructor = new (
 ) => MathNode;
 
 export const MATHML_NODE_CONSTRUCTORS: { readonly [K in NodeKind]: MathmlNodeConstructor } = {
+  annotation: AnnotationNode,
   abs: AbsNode,
   bar: BarNode,
   base: BaseNode,

@@ -57,6 +57,13 @@ import {
 } from "./render-shared";
 
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
+  annotation: () => {
+    throw new RenderError(
+      "Annotation is a mapping node with no Ruby renderer",
+      "asciimath",
+      "annotation",
+    );
+  },
   abs: renderAbs,
   bar: renderBar,
   base: renderBase,

@@ -47,6 +47,13 @@ export interface NodeSpec {
 
 /** The census projection. Field lists are checked against it by the suite. */
 export const NODE_SPECS: { readonly [K in NodeKind]: NodeSpec } = {
+  annotation: {
+    rubyClass: "Math::Function::Semantics::Annotation",
+    fields: [
+      ["content", "content"],
+      ["tag", "tag"],
+    ],
+  },
   abs: {
     rubyClass: "Math::Function::Abs",
     fields: [
@@ -341,7 +348,10 @@ export const NODE_SPECS: { readonly [K in NodeKind]: NodeSpec } = {
   },
   unitsml: {
     rubyClass: "Math::Function::Unitsml",
-    fields: [["text", "text"]],
+    fields: [
+      ["input_string", "inputString"],
+      ["text", "text"],
+    ],
   },
   tilde: {
     rubyClass: "Math::Function::Tilde",
@@ -381,6 +391,7 @@ export const NODE_SPECS: { readonly [K in NodeKind]: NodeSpec } = {
       ["category", "category"],
       ["coverage_factor", "coverageFactor"],
       ["coverage_probability", "coverageProbability"],
+      ["distribution", "distribution"],
       ["interval_kind", "intervalKind"],
       ["lower", "lower"],
       ["magnitude", "magnitude"],

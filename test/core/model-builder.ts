@@ -21,6 +21,8 @@ import type { ConstructedMathNode, NodeKind } from "../../src/core/nodes";
 import {
   type AbsInit,
   AbsNode,
+  type AnnotationInit,
+  AnnotationNode,
   type BarInit,
   BarNode,
   type BaseInit,
@@ -108,6 +110,7 @@ import { parseYaml, type YamlValue } from "./corpus-yaml";
 type Init = Record<string, unknown>;
 
 const FACTORIES: { readonly [K in NodeKind]: (init: Init) => ConstructedMathNode } = {
+  annotation: (init) => new AnnotationNode(init as unknown as AnnotationInit),
   abs: (init) => new AbsNode(init as unknown as AbsInit),
   bar: (init) => new BarNode(init as unknown as BarInit),
   base: (init) => new BaseNode(init as unknown as BaseInit),

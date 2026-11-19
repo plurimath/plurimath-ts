@@ -1,4 +1,5 @@
 import type { MathNode, NodeKind } from "../../core/index";
+import { RenderError } from "../../core/index";
 import { renderAbs } from "../../render/abs/html";
 import { renderBar } from "../../render/bar/html";
 import { renderBase } from "../../render/base/html";
@@ -43,6 +44,13 @@ import type { NumberFormat, RenderContext, RenderFn, UnitsmlRenderOptions } from
 
 /** One measured renderer per `NodeKind`; `nary` is the gem-matching refusal entry. */
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
+  annotation: () => {
+    throw new RenderError(
+      "Annotation is a mapping node with no Ruby renderer",
+      "html",
+      "annotation",
+    );
+  },
   abs: renderAbs,
   bar: renderBar,
   base: renderBase,

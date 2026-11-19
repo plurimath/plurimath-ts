@@ -1512,8 +1512,27 @@ export class TextNode extends NodeBase {
   }
 }
 
+/** Lutaml mapping node; Ruby exposes no rendering methods for annotations. */
+export interface AnnotationInit {
+  readonly content?: readonly MathNode[] | null | undefined;
+  readonly tag?: string | null | undefined;
+}
+
+export class AnnotationNode extends NodeBase {
+  readonly kind = "annotation" as const;
+  readonly content: readonly MathNode[] | null | undefined;
+  readonly tag: string | null | undefined;
+
+  constructor(init: AnnotationInit = {}) {
+    super();
+    this.content = init.content;
+    this.tag = init.tag;
+  }
+}
+
 /** Raw UnitsML text; parsing and render-time expansion belong to the leaf service. */
 export interface UnitsmlInit {
+  readonly inputString?: string | null | undefined;
   readonly text: string;
 }
 
@@ -1524,10 +1543,12 @@ export interface UnitsmlInit {
  */
 export class UnitsmlNode extends NodeBase {
   readonly kind = "unitsml" as const;
+  readonly inputString: string | null | undefined;
   readonly text: string;
 
   constructor(init: UnitsmlInit) {
     super();
+    this.inputString = init.inputString;
     this.text = init.text;
   }
 }
@@ -1542,6 +1563,7 @@ export type UncertaintyIntervalKind = "shortest" | "probabilistically_symmetric"
 export interface UncertaintyInit {
   readonly value: MathNode;
   readonly category: UncertaintyCategory;
+  readonly distribution?: string | null | undefined;
   readonly magnitude?: MathNode | null | undefined;
   readonly coverageFactor?: MathNode | null | undefined;
   readonly coverageProbability?: MathNode | null | undefined;
@@ -1566,6 +1588,7 @@ export interface UncertaintyInit {
 export class UncertaintyNode extends NodeBase {
   readonly kind = "uncertainty" as const;
   readonly category: UncertaintyCategory;
+  readonly distribution: string | null;
   readonly coverageFactor: MathNode | null;
   readonly coverageProbability: MathNode | null;
   readonly intervalKind: UncertaintyIntervalKind | null;
@@ -1579,6 +1602,7 @@ export class UncertaintyNode extends NodeBase {
   constructor(init: UncertaintyInit) {
     super();
     this.category = init.category;
+    this.distribution = init.distribution ?? null;
     this.coverageFactor = init.coverageFactor ?? null;
     this.coverageProbability = init.coverageProbability ?? null;
     this.intervalKind = init.intervalKind ?? null;
@@ -1753,6 +1777,7 @@ export class VecNode extends NodeBase {
  * the instance and a same-shape Hash does not respond to it.
  */
 export type ConstructedMathNode =
+  | AnnotationNode
   | AbsNode
   | BarNode
   | BaseNode
@@ -1824,6 +1849,7 @@ export type NodeKind = MathNode["kind"];
 
 /** Every kind, in the union's order. Renderers may reject one, never omit it. */
 export const NODE_KINDS = [
+  "annotation",
   "abs",
   "bar",
   "base",
@@ -1932,6 +1958,7 @@ function kindIsKnown(value: unknown): value is MathNode {
  * that decides core behaviour has to be immutable at runtime too.
  */
 export const EQUALITY_FIELDS: { readonly [K in NodeKind]: readonly string[] } = {
+  annotation: ["content", "tag"],
   abs: ["parameterOne"],
   bar: ["parameterOne"],
   base: ["options", "parameterOne", "parameterTwo"],
@@ -1972,6 +1999,7 @@ export const EQUALITY_FIELDS: { readonly [K in NodeKind]: readonly string[] } = 
     "category",
     "coverageFactor",
     "coverageProbability",
+    "distribution",
     "intervalKind",
     "lower",
     "magnitude",

@@ -35,6 +35,7 @@
 
 import {
   AbsNode,
+  AnnotationNode,
   BarNode,
   BaseNode,
   BinaryFunctionNode,
@@ -139,6 +140,7 @@ export interface AsciimathClassEntry {
  * binding a kind twice or misspelling one is too.
  */
 export const ASCIIMATH_NODE_CONSTRUCTORS: { readonly [K in NodeKind]: AsciimathNodeConstructor } = {
+  annotation: AnnotationNode,
   abs: AbsNode,
   bar: BarNode,
   base: BaseNode,

@@ -975,6 +975,7 @@ function expectSidecarEnvelope(record: FixtureRecord): void {
   expect(Object.keys(inputs).sort()).toStrictEqual(
     [
       "scripts/generate-corpus.rb",
+      ...(record.relative === ARCHIVED_EVALUATION ? [] : ["scripts/oracle-model-fields.rb"]),
       "scripts/render-fixture-provenance.rb",
       record.spec.generator,
       ...(record.spec.additionalInputs ?? []),

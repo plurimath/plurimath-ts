@@ -454,6 +454,8 @@ if $PROGRAM_NAME == __FILE__
   end
 
   # The reader this battery describes must be the one the models use.
+  # These canonical fixtures specify Ox independently of Lutaml's default.
+  Lutaml::Model::Config.xml_adapter_type = :ox
   adapter = Lutaml::Model::Config.xml_adapter
   unless adapter == Lutaml::Xml::Adapter::OxAdapter
     abort "REFUSING: Lutaml's XML adapter is #{adapter.inspect}, not OxAdapter."

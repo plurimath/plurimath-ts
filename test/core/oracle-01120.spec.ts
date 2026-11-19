@@ -33,12 +33,10 @@ describe("Ruby 0.11.20 model fields", () => {
 
   it("includes uncertainty distribution in model state and equality", () => {
     const init = { value: new NumberNode({ value: "1" }), category: "standard" as const };
-    const normal = new UncertaintyNode({ ...init, distribution: "normal" });
+    const normal = new UncertaintyNode({ ...init, distribution: "rect" });
     expect(normalize(new UncertaintyNode(init)).fields.distribution).toBeNull();
-    expect(normalize(normal).fields.distribution).toBe("normal");
-    expect(normal.equals(new UncertaintyNode({ ...init, distribution: "rectangular" }))).toBe(
-      false,
-    );
+    expect(normalize(normal).fields.distribution).toBe("rect");
+    expect(normal.equals(new UncertaintyNode({ ...init, distribution: "triang" }))).toBe(false);
   });
 
   it("keeps UnitsML input_string unassigned and out of equality", () => {

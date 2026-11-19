@@ -14,6 +14,7 @@
  */
 export const CLASS_B_SPECS = [
   "test/scripts/oracle-artifacts.spec.ts",
+  "test/scripts/oracle-model-census.spec.ts",
   "test/scripts/gate-oracle-differential.spec.ts",
   "test/scripts/gate-oracle-generator-command.spec.ts",
   "test/scripts/gate-oracle-preflight.spec.ts",

@@ -85,6 +85,7 @@
 # the gem's own order.
 
 require_relative "generate-core-data"
+require_relative "unicodemath-artifact-probe"
 
 module UnicodeMathParserDataGenerator
   class Error < StandardError; end
@@ -99,6 +100,7 @@ module UnicodeMathParserDataGenerator
   # shared file move a table while the recorded hash stayed identical.
   GENERATOR_INPUT_PATHS = [
     GENERATOR_PATH,
+    "scripts/unicodemath-artifact-probe.rb",
     CoreDataGenerator::GENERATOR_PATH,
     CorpusGenerator::GENERATOR_PATH,
   ].freeze
@@ -243,13 +245,13 @@ module UnicodeMathParserDataGenerator
   # the instance the first time it is used, and rebuilding the 1,492-entry
   # `wrapper_symbols` alternation per probe would dominate the run.
   def parser
-    @parser ||= Plurimath::UnicodeMath::Parse.new
+    @parser ||= UnicodemathArtifactProbe.new
   end
 
   # Parses `text` through one rule of the gem's own grammar, with Parslet's
   # `consume_all`, and answers the tree or nil.
   def rule_parse(text, rule, on: parser)
-    on.public_send(rule).parse(text)
+    Plurimath::UnicodeMath::Mapper.new.unwrap(on.rule(rule).parse(text))
   rescue *CorpusGenerator::PARSE_FAILED
     nil
   end
@@ -297,7 +299,12 @@ module UnicodeMathParserDataGenerator
                    "the union below would hide the contradiction"
     end
 
-    known = (emitted | UNCONSUMED_CONSTANTS).sort
+    # These token inventories moved into umath's checked grammar. All remaining
+    # model/render constants still participate in the exhaustive inventory.
+    artifact_owned = %w[ALPHANUMERIC_FONTS_CLASSES CLOSE_PARENTHESIS CLOSE_SYMBOLS
+      NEGATABLE_SYMBOLS OPEN_PARENTHESIS OPEN_SYMBOLS ORDINARY_SYMBOLS
+      PREFIXED_NEGATABLE_SYMBOLS UNARY_FUNCTIONS]
+    known = ((emitted | UNCONSUMED_CONSTANTS) - artifact_owned).sort
     actual = constants.constants.map(&:to_s).sort
     return if known == actual
 
@@ -343,8 +350,10 @@ module UnicodeMathParserDataGenerator
       # `module_eval` rather than `instance_eval`: the source strings are written
       # as they appear in constants_rules.rb, so `OPEN_SYMBOLS` must resolve
       # against the module's own constants rather than its singleton class.
-      values = source == "Constants.wrapper_symbols" ? constants.wrapper_symbols
-                                                     : constants.module_eval(source)
+      values = parser.literals(rule).map do |text|
+        raise Error, "#{rule} token lacks prefix #{prefix.inspect}" unless text.start_with?(prefix)
+        text.delete_prefix(prefix)
+      end
       [name, literal_list(name, values, rule, prefix, also)]
     end
   end
@@ -456,7 +465,7 @@ module UnicodeMathParserDataGenerator
       # parser would keep the marker of whichever locale reached it first —
       # which is also why `UnicodeMath::Parser#parse` builds a new `Parse` for
       # every call.
-      fresh = Plurimath::UnicodeMath::Parse.new
+      fresh = UnicodemathArtifactProbe.new
       tree = rule_parse("1#{encoded}5", :number, on: fresh)
       unless decimal_number?(tree, encoded)
         raise Error, "under #{locale.inspect}, #{"1#{encoded}5".inspect} does not read " \
@@ -477,7 +486,7 @@ module UnicodeMathParserDataGenerator
 
     Plurimath.with_configuration do |configuration|
       configuration.locale = locale
-      fresh = Plurimath::UnicodeMath::Parse.new
+      fresh = UnicodemathArtifactProbe.new
       [".", ","].each do |fallback|
         tree = rule_parse("1#{fallback}5", :number, on: fresh)
         next if decimal_number?(tree, fallback)
@@ -518,7 +527,7 @@ module UnicodeMathParserDataGenerator
   # ship data nothing reads.
   def get_class_sources
     sources = Hash.new { |hash, key| hash[key] = [] }
-    (constants::UNARY_FUNCTIONS - constants::UNDEF_UNARY_FUNCTIONS).each do |name|
+    (parser.literals(:op_unary_functions) - constants::UNDEF_UNARY_FUNCTIONS).each do |name|
       sources[name] << "unary_functions"
     end
     constants::NARY_CLASSES.each_key { |name| sources[name.to_s] << "nary_class" }
@@ -566,7 +575,7 @@ module UnicodeMathParserDataGenerator
   # with no `FONT_STYLES` entry would make the rule call `.new` on nil, so a
   # miss stops generation rather than shipping.
   def font_style_rows(census_index)
-    names = (constants::FONTS_CLASSES + constants::ALPHANUMERIC_FONTS_CLASSES).uniq
+    names = (constants::FONTS_CLASSES + parser.literals(:op_alphanumeric_fonts).map { |text| text.delete_prefix(SLASH) }).uniq
     missing = names.reject { |name| Plurimath::Utility::FONT_STYLES.key?(name.to_sym) }
     unless missing.empty?
       raise Error, "font_class text(s) #{missing.join(', ')} have no FONT_STYLES " \

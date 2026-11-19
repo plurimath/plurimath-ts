@@ -76,6 +76,7 @@
 # the gem's own order, because that order is the grammar's ordered choice.
 
 require_relative "generate-core-data"
+require_relative "latex-artifact-probe"
 
 module LatexParserDataGenerator
   class Error < StandardError; end
@@ -90,6 +91,7 @@ module LatexParserDataGenerator
   # shared file move a table while the recorded hash stayed identical.
   GENERATOR_INPUT_PATHS = [
     GENERATOR_PATH,
+    "scripts/latex-artifact-probe.rb",
     CoreDataGenerator::GENERATOR_PATH,
     CorpusGenerator::GENERATOR_PATH,
   ].freeze
@@ -136,7 +138,7 @@ module LatexParserDataGenerator
   # probe would not rebuild anything anyway — but it would rebuild the *rule*
   # entities, and thousands of those are the slow part.
   def parser
-    @parser ||= Plurimath::Latex::Parse.new
+    @parser ||= LatexArtifactProbe.parser
   end
 
   # Parses `text` through one rule of the gem's own grammar, with Parslet's
@@ -193,22 +195,8 @@ module LatexParserDataGenerator
   end
 
   def literal_tables
-    parens = constants.parenthesis
-    unless parens.is_a?(::Hash) && !parens.empty?
-      raise Error, "Constants.parenthesis is #{parens.class}; expected a non-empty Hash"
-    end
-
-    sources = {
-      "numericValues" => constants::NUMERIC_VALUES,
-      "underoverClasses" => constants::UNDEROVER_CLASSES,
-      "mathOperators" => constants::MATH_OPERATORS,
-      "lparen" => parens.keys,
-      "rparen" => parens.values.flatten,
-      "leftRightParens" => constants::LEFT_RIGHT_PARENTHESIS.keys,
-      "environments" => constants::MATRICES.keys,
-    }
-    tables = sources.to_h do |name, values|
-      [name, literal_list(name, values, RULE_FOR_TABLE.fetch(name))]
+    tables = RULE_FOR_TABLE.to_h do |name, rule|
+      [name, literal_list(name, LatexArtifactProbe.literals(rule), rule)]
     end
     assert_left_right_parens_shared!(tables.fetch("leftRightParens"))
     assert_ordered_choice_reachable!(tables)
@@ -255,14 +243,8 @@ module LatexParserDataGenerator
   # one position — and the duplicated ones are checked by parse below, in both
   # spellings, so the emitted order is evidence rather than an assumption.
   def symbol_constant_rows
-    table = constants.symbols_constants
-    unless table.is_a?(::Hash) && !table.empty?
-      raise Error, "Constants.symbols_constants is #{table.class}; expected a non-empty Hash"
-    end
-
-    rows = table.map { |key, kind| [key.to_s, kind.to_s] }
+    rows = LatexArtifactProbe.symbol_rows
     assert_length_ordered!(rows)
-    assert_kinds_reachable!(rows)
     rows
   end
 
@@ -363,12 +345,12 @@ module LatexParserDataGenerator
     add = ->(names, tag) { names.each { |name| sources[name] << tag } }
     add.call(symbols.call(:unary), "unary")
     add.call(symbols.call(:unary), "unary_functions")
-    add.call(constants::MATH_OPERATORS, "unary_functions")
+    add.call(LatexArtifactProbe.literals("math_operators_classes"), "unary_functions")
     add.call(symbols.call(:ternary), "ternary")
     add.call(symbols.call(:ternary), "ternary_functions")
     add.call(symbols.call(:binary), "binary")
     add.call(symbols.call(:power_base), "binary")
-    add.call(constants::UNDEROVER_CLASSES, "binary")
+    add.call(LatexArtifactProbe.literals("underover_classes"), "binary")
     add.call(symbols.call(:text), "text")
     add.call(symbols.call(:underover), "underover")
     add.call(["bar"], "overline_substitution")
@@ -538,7 +520,7 @@ module LatexParserDataGenerator
   def symbol_class_rows
     # The grammar side first, exactly as `Latex::Parser#parse` does it: it is
     # what fixes the `@@parens` cache to the Lcurly-less table.
-    constants.parenthesis
+    Plurimath::Utility.parens_hash(:latex, skipables: ["lcurly"])
     symbols = Plurimath::Utility.symbols_hash(:latex)
     parens = Plurimath::Utility.parens_hash(:latex)
     merged = Plurimath::Utility.all_symbols_classes(:latex)
@@ -723,7 +705,7 @@ module LatexParserDataGenerator
       # parser would keep the marker of whichever locale reached it first --
       # which is also why the gem's own `Latex::Parser#parse` builds a new
       # `Parse` for every call.
-      fresh = Plurimath::Latex::Parse.new
+      fresh = LatexArtifactProbe.parser
       own = "1#{encoded}5"
       unless leaf(rule_parse(own, :symbol_text_or_integer, on: fresh)) == ["number", own]
         raise Error, "under #{locale.inspect}, #{own.inspect} is not read as one " \

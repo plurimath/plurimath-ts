@@ -97,6 +97,7 @@
 # keep the gem's own order; derived lookups preserve its mappings.
 
 require_relative "generate-core-data"
+require_relative "latex-artifact-probe"
 
 module HtmlParserDataGenerator
   class Error < StandardError; end
@@ -111,6 +112,7 @@ module HtmlParserDataGenerator
   # shared file move a table while the recorded hash stayed identical.
   GENERATOR_INPUT_PATHS = [
     GENERATOR_PATH,
+    "scripts/latex-artifact-probe.rb",
     CoreDataGenerator::GENERATOR_PATH,
     CorpusGenerator::GENERATOR_PATH,
   ].freeze
@@ -527,13 +529,13 @@ module HtmlParserDataGenerator
   # The contrast the comment above rests on, so it cannot rot into a false
   # claim: both other formats DO accept an empty hex body.
   def assert_other_formats_accept_empty_entity!
-    latex = rule_parse("&#x;", :symbol_class_commands, on: Plurimath::Latex::Parse.new)
+    latex = rule_parse("&#x;", :symbol_class_commands, on: LatexArtifactProbe.parser)
     unless latex == { unicode_symbols: "&#x;" }
       raise Error, "latex/parse.rb:93 no longer reads \"&#x;\" as one :unicode_symbols node " \
                    "(#{latex.inspect}); the HTML-is-stricter claim needs re-measuring"
     end
 
-    unicodemath = rule_parse("&#x;", :unicode, on: Plurimath::UnicodeMath::Parse.new)
+    unicodemath = Plurimath::UnicodeMath::Parse.new.parse("&#x;")
     return unless unicodemath.nil?
 
     raise Error, "unicode_math/parse.rb:30 no longer accepts \"&#x;\"; " \

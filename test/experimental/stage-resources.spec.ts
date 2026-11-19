@@ -37,7 +37,7 @@ it.each([
     const fail = () => {
       throw error;
     };
-    const parse = create({ parseTree: fail, parsePreparedTree: fail });
+    const parse = create({ parse: fail, parseTree: fail, parsePreparedTree: fail });
     try {
       parse("1");
       throw new Error("expected the resource refusal");

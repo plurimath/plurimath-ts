@@ -15,32 +15,49 @@ const facadeManifest = JSON.parse(readFileSync("assets/facade/manifest.json", "u
  * `platform: "neutral"` overrides tsdown's Node default — D2 targets browser
  * bundlers as well as Node.
  */
+/** The library subpaths, shared by their ESM and CJS builds below. */
+const library = {
+  entry: {
+    index: "src/index.ts",
+    core: "src/core/index.ts",
+    asciimath: "src/formats/asciimath/index.ts",
+    "asciimath-amath": "src/formats/asciimath/amath.ts",
+    "unicodemath-umath": "src/formats/unicodemath/umath.ts",
+    "latex-latexmath": "src/formats/latex/latexmath.ts",
+    html: "src/formats/html/index.ts",
+    "html-parsanol": "src/formats/html/parsanol.ts",
+    latex: "src/formats/latex/index.ts",
+    mathml: "src/formats/mathml/index.ts",
+    omml: "src/formats/omml/index.ts",
+    "mathml-leptris": "src/formats/mathml/leptris.ts",
+    "omml-leptris": "src/formats/omml/leptris.ts",
+    unicodemath: "src/formats/unicodemath/index.ts",
+  },
+  platform: "neutral",
+  target: "es2022",
+  dts: true,
+  sourcemap: true,
+  treeshake: true,
+} as const;
+
 export default defineConfig([
   {
-    entry: {
-      index: "src/index.ts",
-      core: "src/core/index.ts",
-      asciimath: "src/formats/asciimath/index.ts",
-      "asciimath-amath": "src/formats/asciimath/amath.ts",
-      "unicodemath-umath": "src/formats/unicodemath/umath.ts",
-      "latex-latexmath": "src/formats/latex/latexmath.ts",
-      html: "src/formats/html/index.ts",
-      "html-parsanol": "src/formats/html/parsanol.ts",
-      latex: "src/formats/latex/index.ts",
-      mathml: "src/formats/mathml/index.ts",
-      omml: "src/formats/omml/index.ts",
-      "mathml-leptris": "src/formats/mathml/leptris.ts",
-      "omml-leptris": "src/formats/omml/leptris.ts",
-      unicodemath: "src/formats/unicodemath/index.ts",
-    },
-    format: ["esm", "cjs"],
-    platform: "neutral",
-    target: "es2022",
-    dts: true,
-    sourcemap: true,
+    ...library,
+    format: ["esm"],
     clean: true,
-    treeshake: true,
     copy: [{ from: "assets/html", to: "dist", rename: "html-artifacts" }],
+  },
+  /**
+   * The CJS twin of the library subpaths. `@plurimath/amath-ts` exports
+   * `./browser` under the `import` condition only, so `require` cannot resolve
+   * it; this build bundles that self-contained module, while the ESM build
+   * above keeps importing it. `clean: false` keeps the ESM outputs.
+   */
+  {
+    ...library,
+    format: ["cjs"],
+    clean: false,
+    deps: { alwaysBundle: [/^@plurimath\/amath-ts\/browser$/] },
   },
   /**
    * `./evaluation/wasm`, built on its own so its bundled verbatim wasm-bindgen

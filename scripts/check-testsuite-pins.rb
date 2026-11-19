@@ -11,6 +11,7 @@
 # first pin, then runs the validator's own pin check (Runner#check_pin) for each
 # other pin. The tampered copies are kept in OUT.
 
+require "fileutils"
 require "stringio"
 require "yaml"
 
@@ -22,7 +23,7 @@ load File.join(testsuite, "scripts", "validate-stages.rb")
 committed = Dir.glob(File.join(pins, "*.yml")).sort
 abort "no pins under #{pins}" if committed.empty?
 
-Dir.mkdir(out) unless Dir.exist?(out)
+FileUtils.mkdir_p(out)
 tampered = committed.flat_map do |path|
   pin = YAML.safe_load_file(path)
   language = File.basename(path, ".yml")

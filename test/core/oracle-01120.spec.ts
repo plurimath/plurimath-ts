@@ -7,6 +7,7 @@ import {
   UncertaintyNode,
   UnitsmlNode,
 } from "../../src/core/index";
+import { uncertaintyProblem } from "../../src/core/uncertainty";
 import { toMathml as renderMathml } from "../../src/formats/mathml/index";
 
 describe("Ruby 0.11.20 model fields", () => {
@@ -37,6 +38,27 @@ describe("Ruby 0.11.20 model fields", () => {
     expect(normalize(new UncertaintyNode(init)).fields.distribution).toBeNull();
     expect(normalize(normal).fields.distribution).toBe("rect");
     expect(normal.equals(new UncertaintyNode({ ...init, distribution: "triang" }))).toBe(false);
+  });
+
+  it("validates the oracle's distribution tags and category restrictions", () => {
+    const number = (value: string) => new NumberNode({ value });
+    const init = { value: number("1"), magnitude: number("1"), category: "standard" as const };
+    for (const distribution of ["rect", "triang", "arcsine"]) {
+      expect(uncertaintyProblem(new UncertaintyNode({ ...init, distribution }))).toBeNull();
+    }
+    expect(uncertaintyProblem(new UncertaintyNode({ ...init, distribution: "normal" }))).toBe(
+      "unknown distribution :normal",
+    );
+    expect(
+      uncertaintyProblem(
+        new UncertaintyNode({
+          ...init,
+          category: "expanded",
+          coverageFactor: number("2"),
+          distribution: "rect",
+        }),
+      ),
+    ).toBe("distribution does not apply to a expanded uncertainty");
   });
 
   it("keeps UnitsML input_string unassigned and out of equality", () => {

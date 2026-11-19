@@ -414,7 +414,7 @@ module LatexParserDataGenerator
   # `Bmatrix`. A naive port capitalizing only the first letter would resolve
   # `Table::VMatrix`, which does not exist.
   def table_class_rows(census_index)
-    rows = constants::MATRICES.keys.map(&:to_s).sort.map do |name|
+    rows = LatexArtifactProbe.literals("environment").sort.map do |name|
       klass = resolve_class(name, table: true)
       if klass.nil?
         raise Error, "`get_table_class(#{name.inspect})` raises NameError; every " \

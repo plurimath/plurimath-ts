@@ -251,11 +251,8 @@ dn["update-nodes-shape"] = dump_nodes(shape_root)
 
 def math_style_tree(content_nodes)
   math = Plurimath::XmlHelper.ox_element("math")
-  math.set_attr({ "xmlns" => "http://www.w3.org/1998/Math/MathML", "display" => "block" })
-  style = Plurimath::XmlHelper.ox_element("mstyle")
-  style.set_attr({ "displaystyle" => "true" })
-  Plurimath::XmlHelper.update_nodes(style, content_nodes)
-  Plurimath::XmlHelper.update_nodes(math, [style])
+  math.set_attr({ "xmlns" => "http://www.w3.org/1998/Math/MathML", "display" => "block", "displaystyle" => "true" })
+  Plurimath::XmlHelper.update_nodes(math, content_nodes)
   math
 end
 

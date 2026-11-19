@@ -13,7 +13,7 @@
  *
  * mathml joins the four text renderers on the locale-is-inert cases:
  * measured on this port, `toMathml` of the same values wraps the identical
- * digits/symbols in `<mn>…</mn>` inside `<mstyle displaystyle="true">` — its
+ * digits/symbols in `<mn>…</mn>` inside `<math displaystyle="true">` — its
  * entry point is a `Formula`, not a bare `Number` node, so it needs its own
  * `formulaNode` builder and an `<mn>`-stripping helper.
  */
@@ -38,10 +38,10 @@ function formulaNode(value: string): FormulaNode {
   return new FormulaNode({ value: [new NumberNode({ value })] });
 }
 
-/** `Formula#to_mathml`'s `<mn>…</mn>` text, inside `<mstyle displaystyle="true">`. */
+/** `Formula#to_mathml`'s `<mn>…</mn>` text, inside `<math displaystyle="true">`. */
 function mathmlNumber(mathml: string): string {
   const compact = mathml.replace(/>\s+</g, "><");
-  const match = /<mstyle displaystyle="true"><mn>(.*)<\/mn><\/mstyle>/s.exec(compact);
+  const match = /<math[^>]* displaystyle="true"><mn>(.*)<\/mn><\/math>/s.exec(compact);
   if (match === null) throw new Error(`no plain <mn> in ${mathml}`);
   return match[1] as string;
 }

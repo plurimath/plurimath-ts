@@ -498,7 +498,8 @@ module SharedRenderConstants
     out
   end
 
-  # The shared fixture's bytes, refused unless identical at the oracle's pin.
+  # Seeds come from this port's pinned corpus, whose commit and hashes are
+  # recorded in each fixture sidecar. Refuse edits to the pinned input bytes.
   def verified_text(path)
     pinned = git(@local, "show", "#{@pin}:#{path}")
     text = File.binread(File.join(@local, path))
@@ -516,12 +517,9 @@ module SharedRenderConstants
   end
 
   def load!(oracle, repo_root)
-    pin = git(oracle, "ls-tree", "HEAD", SUBMODULE).split[2]
-    abort "REFUSING: the oracle pins no #{SUBMODULE}" unless pin&.match?(/\A\h{40}\z/)
     local = File.join(repo_root, SUBMODULE)
-    # A shallow submodule checkout (CI) may lack the oracle's pin; fetch it.
-    _, present = Open3.capture2e("git", "-C", local, "cat-file", "-e", "#{pin}^{commit}")
-    git(local, "fetch", "--quiet", "--depth=1", "origin", pin) unless present.success?
+    pin = git(local, "rev-parse", "HEAD").strip
+    abort "REFUSING: the seed corpus has no pinned commit" unless pin.match?(/\A\h{40}\z/)
     @local = local
     @pin = pin
     @documents = {}

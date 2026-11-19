@@ -47,11 +47,15 @@ const td = (...cells: MathNode[]) =>
 const tr = (...cells: MathNode[]) =>
   new UnaryFunctionNode({ name: "Tr", parameterOne: cells.map((cell) => cell) });
 
-/** The constant `<math>`/`<mstyle>` wrapper every full render carries. */
+/**
+ * The constant `<math>` wrapper every full render carries; `displaystyle`
+ * sits on `<math>` itself (plurimath#477). `inner` is written at the depth it
+ * had under the old `<mstyle>` wrapper, so it is lifted one level here.
+ */
 function math(inner: string, displaystyle = "true"): string {
   return (
-    `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">\n` +
-    `  <mstyle displaystyle="${displaystyle}">\n${inner}\n  </mstyle>\n</math>\n`
+    `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="${displaystyle}">\n` +
+    `${inner.replace(/^ {2}/gm, "")}\n</math>\n`
   );
 }
 
@@ -106,10 +110,9 @@ describe("the options matrix (probe-mathml-edges.rb)", () => {
     expect(toMathml(sinX(), { unaryFunctionSpacing: null })).toBe(math(SIN_BARE));
   });
 
-  it("an empty formula renders the self-closing mstyle", () => {
+  it("an empty formula renders a self-closing math", () => {
     expect(toMathml(new FormulaNode({ value: [] }))).toBe(
-      `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">\n` +
-        `  <mstyle displaystyle="true"/>\n</math>\n`,
+      `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true"/>\n`,
     );
   });
 });
@@ -504,11 +507,11 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
 
   it("fontStyle: carrier keyword table, verbatim miss, nil crash (probes fontstyle-carrier-*)", () => {
     expect(toMathml(formula(new FontStyleNode({ parameterOne: x(), parameterTwo: "bb" })))).toBe(
-      math('    <mstyle mathvariant="bold">\n      <mi>x</mi>\n    </mstyle>'),
+      math('    <mrow mathvariant="bold">\n      <mi>x</mi>\n    </mrow>'),
     );
     expect(
       toMathml(formula(new FontStyleNode({ parameterOne: x(), parameterTwo: "zznope" }))),
-    ).toBe(math('    <mstyle mathvariant="zznope">\n      <mi>x</mi>\n    </mstyle>'));
+    ).toBe(math('    <mrow mathvariant="zznope">\n      <mi>x</mi>\n    </mrow>'));
     expect(() =>
       toMathml(formula(new FontStyleNode({ parameterOne: x(), parameterTwo: null }))),
     ).toThrow(RenderError);
@@ -519,7 +522,7 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
       value: ["r", "e", "d"].map((letter) => new SymbolNode({ value: letter })),
     });
     expect(toMathml(formula(new ColorNode({ parameterOne: red, parameterTwo: x() })))).toBe(
-      math('    <mstyle mathcolor="red">\n      <mi>x</mi>\n    </mstyle>'),
+      math('    <mrow mathcolor="red">\n      <mi>x</mi>\n    </mrow>'),
     );
     expect(
       toMathml(
@@ -531,7 +534,7 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
           }),
         ),
       ),
-    ).toBe(math('    <mstyle mathbackground="red">\n      <mi>x</mi>\n    </mstyle>'));
+    ).toBe(math('    <mrow mathbackground="red">\n      <mi>x</mi>\n    </mrow>'));
     const frac = new ColorNode({
       parameterOne: new FracNode({ parameterOne: x(), parameterTwo: y() }),
       parameterTwo: new SymbolNode({ value: "z" }),
@@ -545,14 +548,14 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     // quotes, and the engine wrapper's write decodes them. Oracle bytes:
     // mathcolor="∑" (U+2211, e2 88 91), NOT the raw "&#x2211;".
     expect(toMathml(parseAsciimath('color("&#x2211;")(x)'))).toBe(
-      math('    <mstyle mathcolor="∑">\n      <mi>x</mi>\n    </mstyle>'),
+      math('    <mrow mathcolor="∑">\n      <mi>x</mi>\n    </mrow>'),
     );
     // The strip runs BEFORE the decode, as in the gem (mathml_options gsubs
     // the hash value, update_attrs decodes at write time): a space ENTITY
     // survives the whitespace strip and decodes into a literal space —
     // oracle: mathcolor=" a". Decode-then-strip would emit "a".
     expect(toMathml(parseAsciimath('color("&#x20;a")(x)'))).toBe(
-      math('    <mstyle mathcolor=" a">\n      <mi>x</mi>\n    </mstyle>'),
+      math('    <mrow mathcolor=" a">\n      <mi>x</mi>\n    </mrow>'),
     );
     // The mathbackground key takes the same decoded path (probed hand-built:
     // the gem's parse never sets backgroundcolor, options only carry it).
@@ -568,7 +571,7 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
           }),
         ),
       ),
-    ).toBe(math('    <mstyle mathbackground="∑">\n      <mi>x</mi>\n    </mstyle>'));
+    ).toBe(math('    <mrow mathbackground="∑">\n      <mi>x</mi>\n    </mrow>'));
   });
 
   it("bar attributes: entity decode, nil value, empty skips, junk refusals (probes bar-*)", () => {

@@ -6,6 +6,7 @@ import {
   NumberNode,
   RenderError,
   SymbolNode,
+  THICK_RSPACE,
 } from "../core/index";
 import { htmlEntityToUnicode } from "../core/nodes";
 import { type TokenRecord, UNITSML_DATA } from "./data";
@@ -130,7 +131,7 @@ function native(expression: Expression, options: EffectiveUnitsmlOptions): reado
             : hydrateModel(resolved);
       return [
         sentinel === "space" && symbol.kind === "symbol"
-          ? { ...symbol, options: { ...symbol.options, rspace: "thickmathspace" } }
+          ? { ...symbol, options: { ...symbol.options, rspace: THICK_RSPACE } }
           : symbol,
       ];
     }
@@ -233,7 +234,7 @@ function mathml(expression: Expression, options: EffectiveUnitsmlOptions): strin
           : typeof value === "string"
             ? mathmlToken(value)
             : failure("UnitsML cannot encode this multiplier Symbol as MathML");
-      return `<mo${sentinel === "space" ? ' rspace="thickmathspace"' : ""}>${token}</mo>`;
+      return `<mo${sentinel === "space" ? ` rspace="${THICK_RSPACE}"` : ""}>${token}</mo>`;
     }
     case "prefix":
       return body(output(record(expression), "mathml"));

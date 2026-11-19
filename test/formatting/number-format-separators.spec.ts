@@ -22,7 +22,7 @@
  * measured directly on this port (no base, no notation in play, so
  * `renderNumberText`'s per-target templates never engage): asciimath, latex,
  * html and unicodemath render the flat text as-is; mathml wraps the SAME text
- * in `<mn>…</mn>` inside its `<mstyle displaystyle="true">`.
+ * in `<mn>…</mn>` inside its `<math displaystyle="true">`.
  */
 
 import { describe, expect, it } from "vitest";

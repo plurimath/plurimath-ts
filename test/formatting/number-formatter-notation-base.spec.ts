@@ -28,10 +28,10 @@ function formula(value: string): FormulaNode {
   return new FormulaNode({ value: [new NumberNode({ value })] });
 }
 
-/** The inside of `<mstyle displaystyle="true">`, whitespace between tags removed. */
+/** The inside of `<math displaystyle="true">`, whitespace between tags removed. */
 function mathmlInside(mathml: string): string {
-  const match = /<mstyle displaystyle="true">(.*)<\/mstyle>/s.exec(mathml.replace(/>\s+</g, "><"));
-  if (match === null) throw new Error(`no mstyle in ${mathml}`);
+  const match = /<math[^>]* displaystyle="true">(.*)<\/math>/s.exec(mathml.replace(/>\s+</g, "><"));
+  if (match === null) throw new Error(`no displaystyle math in ${mathml}`);
   return match[1] as string;
 }
 

@@ -176,17 +176,15 @@ EXPECTED_CONSTRUCTION_REFUSALS = {
   "td[0]=true" => "delete_if",
   "td[0]=zero" => "delete_if",
   "td[0]=empty-string" => "delete_if",
-  "td[0]=node" => "delete_if",
+  "td[0]=node" => "[]",
   "tr[0]=false" => "all?",
   "tr[0]=true" => "all?",
   "tr[0]=zero" => "all?",
   "tr[0]=empty-string" => "all?",
   "tr[0]=node" => "all?",
   # Unitsml::Parser eagerly processes raw text before the renderer runs.
-  # Nil reaches @text.gsub; other non-strings fail extract_equation.start_with?.
+  # Nil and false are retained without parsing; other non-strings fail start_with?.
   # Empty text reaches the unitsml parser and is an explicit syntax refusal.
-  "unitsml[0]=nil" => { "class" => "NoMethodError", "method" => "gsub" },
-  "unitsml[0]=false" => { "class" => "NoMethodError", "method" => "start_with?" },
   "unitsml[0]=true" => { "class" => "NoMethodError", "method" => "start_with?" },
   "unitsml[0]=zero" => { "class" => "NoMethodError", "method" => "start_with?" },
   "unitsml[0]=empty-array" => { "class" => "NoMethodError", "method" => "start_with?" },

@@ -1,7 +1,7 @@
 /**
  * Mirrors `function/font_style.rb` — `FontStyle#to_mathml_without_math_tag`
  * (:33) — and the fourteen subclasses under `function/font_style/`: every
- * one renders `<mstyle mathvariant="...">` over the nil-safe first slot
+ * one renders `<mrow mathvariant="...">` over the nil-safe first slot
  * (probe fontstyle-*), the variant measured per class into the generated
  * table (eight hardcode it, six resolve through `font_family`). The bare
  * carrier resolves `parameter_two` through the generated keyword table —
@@ -36,12 +36,19 @@ export function renderFontStyle(node: NodeOf<"fontStyle">, context: RenderContex
     if (measured === undefined) throw unreachableName(node.kind, node.name);
     variant = measured;
   }
-  const mstyle = new XmlElement("mstyle");
-  setDecodedAttribute(mstyle, "mathvariant", variant, node.kind, "fontStyle.mathvariant");
-  if (node.parameterOne !== null && node.parameterOne !== undefined) {
-    mstyle.append(renderChild(node.parameterOne, context, "fontStyle.parameterOne"));
+  // MathML 4 makes mathvariant global, so it rides on an <mrow> rather than
+  // an <mstyle> (plurimath#477). LaTeX \displaystyle is parsed as a font but
+  // is a style, not a mathvariant value: it becomes displaystyle="true".
+  const mrow = new XmlElement("mrow");
+  if (variant === "displaystyle") {
+    mrow.setAttribute("displaystyle", "true");
+  } else {
+    setDecodedAttribute(mrow, "mathvariant", variant, node.kind, "fontStyle.mathvariant");
   }
-  return mstyle;
+  if (node.parameterOne !== null && node.parameterOne !== undefined) {
+    mrow.append(renderChild(node.parameterOne, context, "fontStyle.parameterOne"));
+  }
+  return mrow;
 }
 
 /**

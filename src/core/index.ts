@@ -113,6 +113,7 @@ export {
   TableNode,
   TernaryFunctionNode,
   TextNode,
+  THICK_RSPACE,
   TildeNode,
   UbraceNode,
   UlNode,

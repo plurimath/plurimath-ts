@@ -115,6 +115,13 @@ export type NodeParameter = MathNode | readonly MathNode[] | string | NodeOption
 export type NodeSequence = readonly (MathNode | string)[];
 
 /**
+ * The thick space (5/18 em) plurimath writes as an `rspace` length:
+ * `Symbols::Symbol::THICK_RSPACE`. MathML 4 dropped the named space
+ * `thickmathspace`, so the gem emits the numeric form (plurimath#476).
+ */
+export const THICK_RSPACE = "0.2778em";
+
+/**
  * Ruby classes the census marks abstract. Recorded, never union members —
  * three of them are also `implemented`, and those appear here as the
  * concrete alias carriers described in the module docs.

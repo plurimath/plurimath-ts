@@ -11,18 +11,18 @@
  *
  *   - a `UNARY_CLASSES` member renders `<mi>name</mi>` and — with
  *     `unary_function_spacing` on, the default — the whole element wraps in
- *     `<mrow><mo rspace="thickmathspace"/>…</mrow>` (probe sin-x); a
+ *     `<mrow><mo rspace="0.2778em"/>…</mrow>` (probe sin-x); a
  *     non-member renders a bare `<mo>` with no wrap, which of the admitted
  *     names only `Hom` takes (`Cancel`, the one reachable non-member, has
  *     its own `menclose` arm and never reaches the default);
  *   - `hide_function_name` drops the name element but keeps the spacing
- *     wrap: `sin-hide-nil` renders `<mrow><mo rspace="thickmathspace"/></mrow>`,
+ *     wrap: `sin-hide-nil` renders `<mrow><mo rspace="0.2778em"/></mrow>`,
  *     and with spacing off the render is Ruby nil;
  *   - a list parameter compacts nil entries before rendering (sin-list-nil).
  */
 
 import type { NodeOptions, NodeParameter } from "../../core/index";
-import { RenderError, TextNode } from "../../core/index";
+import { RenderError, TextNode, THICK_RSPACE } from "../../core/index";
 import {
   describeSlot,
   FORMAT,
@@ -294,7 +294,7 @@ const MEASURED_UNARY_NAMES: ReadonlySet<string> = new Set([
  * the name element (`<mi>` for a `UNARY_CLASSES` member, `<mo>` otherwise)
  * unless hidden; with a parameter, an `<mrow>` over name + value; and — for
  * a member, when `options[:unary_function_spacing]` is truthy — the whole
- * element behind an empty `<mo rspace="thickmathspace"/>` in one more
+ * element behind an empty `<mo rspace="0.2778em"/>` in one more
  * `<mrow>`. Exported for the kind files of classes that inherit it
  * unchanged (none of this port's own kinds do today — every mathml
  * override is measured per class — but `Norm`'s asciimath `super`
@@ -323,7 +323,7 @@ export function renderUnaryMathmlDefault(
   }
   if (isMi && context.unaryFunctionSpacing) {
     return new XmlElement("mrow").append(
-      new XmlElement("mo").setAttribute("rspace", "thickmathspace"),
+      new XmlElement("mo").setAttribute("rspace", THICK_RSPACE),
       unaryElement,
     );
   }

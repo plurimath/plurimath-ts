@@ -24,7 +24,7 @@
  *
  * `expected` is one string when the four text targets all answer it, MathML
  * answers `<mn>` of it and OMML `<m:r><m:t>` of it. Otherwise `expected` holds
- * the six answers: `mathml` is the inside of `<mstyle displaystyle="true">`
+ * the six answers: `mathml` is the inside of `<math displaystyle="true">`
  * and `omml` the inside of `<m:oMath>`, whitespace between tags removed.
  */
 

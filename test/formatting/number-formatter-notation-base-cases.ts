@@ -16,7 +16,7 @@
  * Every row answered one identical string for asciimath, latex, html and
  * unicodemath (`text`): a notation never takes a semantic base's template, it
  * is `FormattedNotation#to_s` with the coefficient's literal prefix and
- * postfix. `mathml` is the inside of `<mstyle displaystyle="true">`,
+ * postfix. `mathml` is the inside of `<math displaystyle="true">`,
  * whitespace between tags removed. The coefficient's digits are found in base
  * 10 and then converted as the gem's `format_parts` converts them, which is why
  * `255` under `notation: "e", base: 16` is `0x2.8ce2` (the gem's own answer,

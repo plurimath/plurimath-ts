@@ -9,7 +9,7 @@
  * files under `src/render/<kind>/mathml.ts` build `XmlElement`s, joined by
  * the dispatch table in `./render.ts` (typed total over `NodeKind`) and
  * recursing through `context.render`; this module owns the `<math>`/
- * `<mstyle>` wrapper, the option surface, and the boundary.
+ * `displaystyle` attribute, the option surface, and the boundary.
  *
  * Only a `formula` or `mrow` node can enter: the gem defines `to_mathml` on
  * `Formula` alone (`Mrow` and `Mstyle` inherit it), and every other class
@@ -24,7 +24,7 @@
  */
 
 import { describeThrown } from "../../core/errors";
-import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
+import { assertMathNodeShape, type MathNode, RenderError, THICK_RSPACE } from "../../core/index";
 import { splitOnLinebreak } from "../../core/linebreak";
 import { assertKnownOptions } from "../../core/render-options";
 import { type FormatterOptions, resolveNumberFormat } from "../../formatting/index";
@@ -52,7 +52,7 @@ export interface MathmlOptions {
   readonly displayStyle?: boolean | string | null | undefined;
   /**
    * The gem's `unary_function_spacing:` keyword, default true: wraps every
-   * `UNARY_CLASSES` function in `<mrow><mo rspace="thickmathspace"/>…</mrow>`.
+   * `UNARY_CLASSES` function in `<mrow><mo rspace="0.2778em"/>…</mrow>`.
    * Ruby truthiness — `null` (the gem's `nil`, dropped by its `.compact`)
    * turns the spacing off (probed).
    */
@@ -256,14 +256,16 @@ function renderMath(
   // `boolean_display_style`: `display_style.to_s == "true"`.
   const displaystyle = String(displayValue) === "true";
 
+  // MathML 4 carries displaystyle on <math> itself, so no <mstyle> wrapper
+  // is emitted (plurimath#477).
   const math = new XmlElement("math")
     .setAttribute("xmlns", "http://www.w3.org/1998/Math/MathML")
-    .setAttribute("display", "block");
-  const style = new XmlElement("mstyle").setAttribute("displaystyle", String(displaystyle));
+    .setAttribute("display", "block")
+    .setAttribute("displaystyle", String(displaystyle));
 
-  // `mathml_content` — the root formula's value renders STRAIGHT into the
-  // mstyle, no mrow and no left_right_wrapper read (probed: a two-symbol
-  // formula's <mi>s sit directly under <mstyle>).
+  // `mathml_content` — the root formula's value renders STRAIGHT into
+  // <math>, no mrow and no left_right_wrapper read (probed: a two-symbol
+  // formula's <mi>s sit directly under <math>).
   const value = (node as { readonly value?: unknown }).value;
   if (!Array.isArray(value)) {
     throw new RenderError(
@@ -276,16 +278,15 @@ function renderMath(
   // `mathml_content` (formula.rb:133-139): the rendered children, then — under
   // intent — the formula-level rewrite, in place, before they are appended.
   if (intent) intentPostProcessing(nodes);
-  style.append(nodes);
-  math.append(style);
+  math.append(nodes);
 
   // The gem suppresses the separator when the formula is solely UnitsML.
   if (
-    style.children.length === 1 &&
-    style.children[0] instanceof XmlElement &&
-    style.children[0].attributes.get("unitsml") === "true"
+    math.children.length === 1 &&
+    math.children[0] instanceof XmlElement &&
+    math.children[0].attributes.get("unitsml") === "true"
   ) {
-    style.children[0].removeAttribute("unitsml");
+    math.children[0].removeAttribute("unitsml");
   } else {
     unitsmlPostProcessing(math);
   }
@@ -302,7 +303,7 @@ function unitsmlPostProcessing(parent: XmlElement): void {
       children.splice(
         index,
         0,
-        new XmlElement("mo").setAttribute("rspace", "thickmathspace").append("&#x2062;"),
+        new XmlElement("mo").setAttribute("rspace", THICK_RSPACE).append("&#x2062;"),
       );
       index += 1;
       node.removeAttribute("unitsml");

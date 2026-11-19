@@ -1,6 +1,6 @@
 import type { MathNode, NodeKind } from "../../core/index";
-import { RenderError } from "../../core/index";
 import { renderAbs } from "../../render/abs/omml";
+import { renderAnnotation } from "../../render/annotation/omml";
 import { renderBar } from "../../render/bar/omml";
 import { renderBase } from "../../render/base/omml";
 import { renderBinaryFunction } from "../../render/binary-function/omml";
@@ -50,13 +50,7 @@ import type {
 
 /** One measured renderer per `NodeKind`; the mapped type makes omissions compile errors. */
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
-  annotation: () => {
-    throw new RenderError(
-      "Annotation is a mapping node with no Ruby renderer",
-      "omml",
-      "annotation",
-    );
-  },
+  annotation: renderAnnotation,
   abs: renderAbs,
   bar: renderBar,
   base: renderBase,

@@ -9,6 +9,7 @@
 
 import { type MathNode, type NodeKind, RenderError } from "../../core/index";
 import { renderAbs } from "../../render/abs/latex";
+import { renderAnnotation } from "../../render/annotation/latex";
 import { renderBar } from "../../render/bar/latex";
 import { renderBase } from "../../render/base/latex";
 import { renderBinaryFunction } from "../../render/binary-function/latex";
@@ -57,13 +58,7 @@ import {
 } from "./render-shared";
 
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
-  annotation: () => {
-    throw new RenderError(
-      "Annotation is a mapping node with no Ruby renderer",
-      "latex",
-      "annotation",
-    );
-  },
+  annotation: renderAnnotation,
   abs: renderAbs,
   bar: renderBar,
   base: renderBase,

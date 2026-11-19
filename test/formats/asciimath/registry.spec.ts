@@ -35,7 +35,7 @@ describe("the hand-written kind → constructor map", () => {
     // The model has 40 kinds (the census's 39 plus Uncertainty, which the
     // census gains on the re-pin); a shorter walk here would mean the loop
     // below quietly proved less than the whole map.
-    expect(NODE_KINDS.length).toBe(40);
+    expect(NODE_KINDS.length).toBe(41);
     for (const kind of NODE_KINDS) {
       const node = new ASCIIMATH_NODE_CONSTRUCTORS[kind]({});
       // The node's own discriminant, not the map's key: `abs: BarNode` type

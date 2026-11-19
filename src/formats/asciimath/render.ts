@@ -9,6 +9,7 @@
 
 import { type MathNode, type NodeKind, RenderError } from "../../core/index";
 import { renderAbs } from "../../render/abs/asciimath";
+import { renderAnnotation } from "../../render/annotation/asciimath";
 import { renderBar } from "../../render/bar/asciimath";
 import { renderBase } from "../../render/base/asciimath";
 import { renderBinaryFunction } from "../../render/binary-function/asciimath";
@@ -57,13 +58,7 @@ import {
 } from "./render-shared";
 
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
-  annotation: () => {
-    throw new RenderError(
-      "Annotation is a mapping node with no Ruby renderer",
-      "asciimath",
-      "annotation",
-    );
-  },
+  annotation: renderAnnotation,
   abs: renderAbs,
   bar: renderBar,
   base: renderBase,

@@ -1,4 +1,6 @@
 /** Actual initialized stages -> common model -> writers, against pinned source observations. */
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -49,21 +51,46 @@ const generations = { asciimath: 3, latex: 4, unicode: 4, mathml: 2, omml: 2 };
 const expectedCounts = { asciimath: 160, latex: 125, unicode: 20, mathml: 287, omml: 190 };
 const sources = [];
 const cases = [];
-// AsciiMath stage rows whose UnicodeMath output the pinned facade corpus has
-// since re-recorded. Ruby main's own replay expects these stage rows to
-// mismatch; the corpus row is the current output.
-const currentProfiles = {
-  "text-unitsml-valid": { file: "quoted-text.yaml", profile: "current-facade-quoted-unitsml" },
-  "colour-named": { file: "colour.yaml", profile: "current-facade-colour-name" },
-  "colour-in-sum": { file: "colour.yaml", profile: "current-facade-colour-name" },
+// The immutable stage generations still prove source models. Writers use the
+// current, separately versioned facade observations at this testsuite pin.
+const corpusRoot = join(root, "submodules/plurimath-testsuite");
+const provenancePath = join(corpusRoot, "corpus/provenance.yaml");
+const provenanceBytes = readFileSync(provenancePath);
+const provenance = parseYaml(provenanceBytes.toString("utf8"));
+assert.equal(provenance.committable, true, "facade source must be committable");
+const testsuiteCommit = execFileSync("git", ["-C", corpusRoot, "rev-parse", "HEAD"], {
+  encoding: "utf8",
+}).trim();
+const writerProfile = {
+  name: "current-facade-corpus",
+  testsuiteCommit,
+  oracle: provenance.oracle,
+  provenance: {
+    path: provenancePath.slice(root.length + 1),
+    sha256: createHash("sha256").update(provenanceBytes).digest("hex"),
+  },
 };
-for (const [id, entry] of Object.entries(currentProfiles)) {
-  const corpus = parseYaml(
-    readFileSync(join(root, "submodules/plurimath-testsuite/corpus/asciimath", entry.file), "utf8"),
-  );
-  const row = corpus.cases.find((candidate) => candidate.id === id);
-  if (!row) throw new Error(`missing current facade source profile ${id}`);
-  entry.unicodemath = row.expected.unicodemath;
+
+function currentFacadeRows(format) {
+  const rows = new Map();
+  const dir = join(corpusRoot, "corpus", format);
+  for (const name of readdirSync(dir)
+    .filter((name) => name.endsWith(".yaml"))
+    .sort()) {
+    const path = join(dir, name),
+      bytes = readFileSync(path);
+    const source = {
+      profile: writerProfile.name,
+      path: path.slice(root.length + 1),
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+    };
+    const document = parseYaml(bytes.toString("utf8"));
+    for (const row of document.cases ?? []) {
+      assert.equal(rows.has(row.id), false, `${format}: duplicate facade id ${row.id}`);
+      rows.set(row.id, { row, source });
+    }
+  }
+  return rows;
 }
 
 function callOptions(call) {
@@ -98,6 +125,7 @@ for (const [format, generation] of Object.entries(generations)) {
     "payloads",
   );
   const selected = [];
+  const current = currentFacadeRows(format);
   for (const name of readdirSync(dir)
     .filter((name) => name.endsWith(".yaml"))
     .sort()) {
@@ -121,34 +149,40 @@ for (const [format, generation] of Object.entries(generations)) {
       `${format}: found ${selected.length}, expected ${expectedCounts[format]} source cases`,
     );
   for (const row of selected) {
-    const result = { format, id: row.id, modelEqual: false, writers: [] };
+    const profile = current.get(row.id);
+    assert.ok(profile, `${format}/${row.id}: missing current facade observation`);
+    // A writer-profile upgrade must never silently change its source or model.
+    assert.equal(profile.row.input, row.input, `${format}/${row.id}: facade input changed`);
+    assert.deepEqual(profile.row.call, row.call, `${format}/${row.id}: facade call changed`);
+    assert.deepEqual(profile.row.model, row.model, `${format}/${row.id}: facade model changed`);
+    const result = { format, id: row.id, source: profile.source, modelEqual: false, writers: [] };
     try {
       const model = parsers[format](row.input);
       result.modelEqual = isDeepStrictEqual(normalize(model), row.model);
       for (const [target, observation] of Object.entries(row.expected)) {
         const name = target === "unicodemath" ? "unicode" : target;
+        const currentObservation = profile.row.expected[target];
+        assert.ok(currentObservation !== undefined, `${format}/${row.id}: no current ${target}`);
+        const expected =
+          typeof currentObservation === "string" ? currentObservation : currentObservation.output;
+        const historical = typeof observation === "string" ? observation : observation.output;
         try {
           const actual = writers[name](model, callOptions(row.call));
-          const expected = typeof observation === "string" ? observation : observation.output;
-          const historicalEqual = actual === expected;
-          // Keep the old stage oracle immutable. The current facade corpus is
-          // a separately named source profile; this is not normative promotion.
-          const current = format === "asciimath" ? currentProfiles[row.id] : undefined;
-          const currentProfileEqual =
-            current !== undefined && name === "unicode" && actual === current.unicodemath;
+          const equal = actual === expected;
+          const historicalEqual = actual === historical;
           result.writers.push({
             target: name,
-            equal: historicalEqual || currentProfileEqual,
+            equal,
             historicalEqual,
-            ...(currentProfileEqual && !historicalEqual
-              ? { profile: current.profile, historicalDifference: true }
-              : {}),
-            ...(historicalEqual || currentProfileEqual ? {} : { actual, expected }),
+            ...(equal && !historicalEqual ? { historicalDifference: true } : {}),
+            ...(equal ? {} : { actual, expected }),
           });
         } catch (error) {
           result.writers.push({
             target: name,
-            equal: typeof observation === "object" && observation.error?.category === "parse_error",
+            equal:
+              typeof currentObservation === "object" &&
+              currentObservation.error?.category === "parse_error",
             error: { name: error.name, message: error.message },
           });
         }
@@ -182,6 +216,7 @@ const report = {
   node: process.version,
   entries,
   generations,
+  writerProfile,
   sources,
   summary,
   cases,

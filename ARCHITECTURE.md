@@ -186,9 +186,8 @@ src/
                      its own output. (a) exists; (b) plus the wider locale
                      surface are P4 (§9). Imports: nothing internal.
   evaluation/        evaluate(formula, bindings, options). Imports: core.
-  unitsml/           DEFERRED (decided 2026-07-29, §5) — not built until the
-                     approach is settled with the maintainer. When it lands it
-                     is a leaf service: conversion (unit text → FormulaNode) and
+  unitsml/           Native leaf service (approved 2026-10-14, §5):
+                     conversion (unit text → FormulaNode) and
                      the standalone `unitsml` input parser as separate entry
                      points, so a renderer never pulls the parser.
   compat/            The frozen `Plurimath` class. Imports: everything.
@@ -406,14 +405,14 @@ export default class Plurimath { ... } // compat, below
 ```
 
 `Format` uses `unicode`, not `unicodemath`, alongside `asciimath`, `latex`,
-`html`, `mathml` and `omml`. The root dispatches directly to those six existing
+`html`, `mathml`, `omml` and `unitsml`. The root dispatches directly to those seven
 parsers. `ParseOptions<F>` selects that format's existing text parse-options
-interface; MathML and OMML use `Record<string, never>`. Their parsers accept
+interface; MathML, OMML and UnitsML use `Record<string, never>`. Their parsers accept
 no options, so the root permits absent, null or empty options but rejects
-nonempty option keys before reading XML. Text formats forward locale and
-`onUnsupported` unchanged. Unknown runtime tokens raise `InvalidTypeError`;
-the recognized but deferred `unitsml` token raises `UnsupportedFormatError`
-and is excluded from `Format`. The compat constructor keeps its two arguments
+nonempty option keys before parsing. Text formats forward locale and
+`onUnsupported` unchanged. Unknown runtime tokens raise `InvalidTypeError`.
+Standalone UnitsML follows Ruby 142bc513's Formula wrapper and is included
+in `Format`. The compat constructor keeps its two arguments
 and existing default warning behaviour.
 
 **Compat surface — method-exact with the `plurimath-js` ABI** (declaration
@@ -421,7 +420,7 @@ target settled 2026-09-04: source head `ce297e2`, verified against its source,
 `src/index.ts` + `src/plurimath-opal.d.ts`):
 
 ```ts
-type CompatFormat = "asciimath" | "latex" | "mathml" | "html" | "unicode" | "omml";
+type CompatFormat = "asciimath" | "latex" | "mathml" | "html" | "unicode" | "omml" | "unitsml";
                                             // NOTE: "unicode", not "unicodemath"
 export default class Plurimath {
   readonly data: FormulaNode;                 // published class: writable Opal ParserResult
@@ -452,15 +451,15 @@ overrides it.
 
 **The compat class landed once an input format existed to wrap** (asciimath
 and latex first, then html and unicode as their batteries landed — §"The
-parser each input format uses" above). All six constructor formats now have native parsers. UnitsML remains
-deferred (§5), so replacement parity still carries that documented gap. `toDisplay` renders the
+parser each input format uses" above). All seven constructor formats now have native parsers,
+including standalone UnitsML (§5). `toDisplay` renders the
 gem's tree dump (#139, #150); `toMathml(true)` now renders (B4, `intent`).
 
-**Availability constraint.** The compat constructor accepts six input formats,
+**Availability constraint.** The compat constructor accepts seven input formats,
 but input formats land across phases (§9). The compat class is therefore only
 *complete* once every input format works; before that point, an unimplemented
-format throws `UnsupportedFormatError`. Publishing under the `plurimath-js`
-package name — where users expect all six — is gated on completeness (§11).
+format must refuse explicitly. Publishing under the `plurimath-js`
+package name is gated on completeness (§11).
 
 Rejected: a third "wrapped Formula with render methods" hybrid on the root
 entry — one more API shape than users need (D3, over-implementation guard).
@@ -834,10 +833,13 @@ both quoted-UnitsML transform rules; invalid unit expressions fail during parsin
 No Ruby, Opal, external package, or service is required by the runtime.
 
 The raw-text projection above deliberately excludes Ruby's parsed `@unitsml`
-cache. The generator applies the same explicit projection. The standalone Ruby
-`Math.parse("kg", :unitsml)` route raises on the pinned oracle because its result
-has no `input_string=` setter; inline AsciiMath UnitsML is the supported parse
-path. A separate public UnitsML package subpath is not introduced by this work.
+cache. The generator applies the same explicit projection. Standalone
+`Math.parse("kg", :unitsml)` returns a Formula wrapping a UnitsML node since
+Ruby 142bc513 (measured at b0a695cb); the former `input_string=` failure belongs
+to the older oracle. Both standalone and inline AsciiMath UnitsML are supported.
+They retain their distinct source strings and share all six writers. Standalone
+reference models and bytes are pinned in `test/formats/unitsml/standalone-input.yaml`.
+A separate public UnitsML package subpath is not introduced by this work.
 
 Expected values and database tables are measured on the pinned Ruby oracle in
 GHA. Probe artifacts record source, generator, lockfile, dependency versions and

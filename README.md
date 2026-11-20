@@ -30,8 +30,9 @@ organization are deferred.
 
 The current source and package entries provide:
 
-- Parsers exist for all six formats, exposed on their subpaths and through
-  the root `parse` function and compat constructor.
+- Parsers exist for all six math formats, exposed on their subpaths and through
+  the root `parse` function and compat constructor. The root and constructor
+  also accept standalone UnitsML input.
 - Renderers exist for all six output formats: AsciiMath, LaTeX, MathML, HTML,
   UnicodeMath and OMML.
 - Nine package subpaths are built: `./core`, `./asciimath`, `./latex`,

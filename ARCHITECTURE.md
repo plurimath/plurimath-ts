@@ -73,8 +73,11 @@ also uses Parsanol: its three checked Ruby-derived PARG artifacts in
 consumer still owns normalization, source maps, capture lowering and model
 mapping; `html/parsanol` remains the caller-initialized browser entry. The
 legacy HTML grammar is retained for raw-tree conformance tests, outside the
-default parsing path. The other default parsers remain until their replacements
-pass their compatibility boundaries.
+default parsing path. Default LaTeX and UnicodeMath also use their shared
+latexmath-ts and umath-ts typed-model consumers with lazy decimal runtimes and
+checked PARG artifacts. The initialized entries remain independent of runtime
+construction for browser callers. The handwritten grammars remain only for
+raw-tree conformance; package gates exclude them from the default entries.
 
 ## 1. Contract
 

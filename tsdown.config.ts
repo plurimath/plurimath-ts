@@ -48,7 +48,7 @@ export default defineConfig([
     copy: [{ from: "assets/html", to: "dist", rename: "html-artifacts" }],
   },
   /**
-   * The CJS twin of the library subpaths. `@plurimath/amath-ts` exports
+   * The CJS twin of the library subpaths. The shared stage packages export
    * `./browser` under the `import` condition only, so `require` cannot resolve
    * it; this build bundles that self-contained module, while the ESM build
    * above keeps importing it. `clean: false` keeps the ESM outputs.
@@ -57,7 +57,7 @@ export default defineConfig([
     ...library,
     format: ["cjs"],
     clean: false,
-    deps: { alwaysBundle: [/^@plurimath\/amath-ts\/browser$/] },
+    deps: { alwaysBundle: [/^@plurimath\/(?:amath|latexmath|umath)-ts\/browser$/] },
   },
   /**
    * `./evaluation/wasm`, built on its own so its bundled verbatim wasm-bindgen

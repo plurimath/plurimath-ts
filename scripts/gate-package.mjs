@@ -277,12 +277,14 @@ const FORBIDDEN = {
     /xml\//,
     LOCALE_GROUPS,
     /formats\/latex\/grammar\.ts$/,
+    /formats\/latex\/stage\.ts$/,
   ],
   "./unicodemath/umath": [
     ...forbidOtherFormats("unicodemath"),
     /xml\//,
     LOCALE_GROUPS,
     /formats\/unicodemath\/grammar\.ts$/,
+    /formats\/unicodemath\/stage\.ts$/,
   ],
   "./asciimath/amath": [...forbidOtherFormats("asciimath"), /xml\//, LOCALE_GROUPS],
   // HTML parses as well as renders, so pegkit is expected here; `xml` still
@@ -298,7 +300,12 @@ const FORBIDDEN = {
   // LaTeX parses as well as renders (ARCHITECTURE.md §3, "parsing *and*
   // rendering when both exist"), so pegkit is expected here; `xml` still is
   // not, because LaTeX output is text.
-  "./latex": [...forbidOtherFormats("latex"), /xml\//, LOCALE_GROUPS],
+  "./latex": [
+    ...forbidOtherFormats("latex"),
+    /xml\//,
+    LOCALE_GROUPS,
+    /formats\/latex\/grammar\.ts$/,
+  ],
   "./mathml": [...forbidOtherFormats("mathml"), /pegkit\//, LOCALE_DECIMALS, LOCALE_GROUPS],
   // OMML reads and writes through the XML layer. Its parser needs neither
   // pegkit nor locale tables, so those remain forbidden in this subpath.
@@ -307,7 +314,12 @@ const FORBIDDEN = {
   "./omml/leptris": [optionalReaderOutside("omml"), /(?:^|\/)render(?:er|-shared)?\.ts$/],
   // UnicodeMath parses as well as renders, so pegkit is expected here on the
   // same grounds as `/latex`; `xml` still is not, because its output is text.
-  "./unicodemath": [...forbidOtherFormats("unicodemath"), /xml\//, LOCALE_GROUPS],
+  "./unicodemath": [
+    ...forbidOtherFormats("unicodemath"),
+    /xml\//,
+    LOCALE_GROUPS,
+    /formats\/unicodemath\/grammar\.ts$/,
+  ],
 };
 
 /** Sources a subpath's artifact must contain — the positive control for `FORBIDDEN`'s locale rows. */
@@ -322,8 +334,8 @@ const REQUIRED = {
   "./unicodemath/umath": [LOCALE_DECIMALS, /formats\/unicodemath\/umath\.ts$/],
   "./html": [LOCALE_DECIMALS, /formats\/html\/stage\.ts$/],
   "./html/parsanol": [LOCALE_DECIMALS, /formats\/html\/parsanol\.ts$/],
-  "./latex": [LOCALE_DECIMALS],
-  "./unicodemath": [LOCALE_DECIMALS],
+  "./latex": [LOCALE_DECIMALS, /formats\/latex\/stage\.ts$/],
+  "./unicodemath": [LOCALE_DECIMALS, /formats\/unicodemath\/stage\.ts$/],
 };
 
 const failures = [];

@@ -1,16 +1,24 @@
-import { type FormulaNode, ParseError } from "../../core/index";
-import { ParseFailed, type ParseValue, type SourceMap } from "../../pegkit/index";
+import { ParseError } from "../../core/index";
+import type { ParseValue, SourceMap } from "../../pegkit/index";
 import {
   postProcessing,
   preprocessOrParseError,
-  transformUnicodemathTree,
   type UnicodemathParseOptions,
   validateOptions,
 } from "./consumer";
 
 export type { UnicodemathParseOptions } from "./consumer";
 
-import { parseUnicodemathPreprocessed } from "./grammar";
+import artifact from "@plurimath/umath-ts/artifacts/umath.json" with { type: "json" };
+import { decimalMarkerFor } from "../../formatting/index";
+import {
+  bytePositions,
+  copyCaptures,
+  isStageParseError,
+  positionAt,
+} from "../../pegkit/stage-captures";
+import { unicodemathStage } from "./stage";
+import { createUnicodemathParser } from "./umath";
 
 const FORMAT = "unicode";
 export function parseUnicodemathTree(
@@ -22,12 +30,12 @@ export function parseUnicodemathTree(
   const tree = parsePreprocessed(input, text, map, options);
   return label === undefined ? tree : postProcessing(tree, label);
 }
-export function parseUnicodemath(
-  input: string,
-  options?: UnicodemathParseOptions | null,
-): FormulaNode {
-  return transformUnicodemathTree(parseUnicodemathTree(input, options), input);
-}
+export const parseUnicodemath = createUnicodemathParser(
+  {
+    parse: (input, options) => unicodemathStage().parse(input, options),
+  },
+  artifact,
+);
 function parsePreprocessed(
   input: string,
   text: string,
@@ -35,10 +43,22 @@ function parsePreprocessed(
   options?: UnicodemathParseOptions | null,
 ): ParseValue {
   try {
-    return parseUnicodemathPreprocessed(text, options);
+    const tree = unicodemathStage().parsePreparedTree(text, {
+      decimal: decimalMarkerFor(options?.locale) as "." | "," | "٫",
+      compatibility: "parslet",
+      reporter: "deepest",
+    });
+    return copyCaptures(tree, text, bytePositions(text));
   } catch (error) {
-    if (error instanceof ParseFailed) {
-      throw new ParseError(error.message, input, FORMAT, map.toOriginal(error.index));
+    if (isStageParseError(error)) {
+      throw new ParseError(
+        error.message,
+        input,
+        FORMAT,
+        map.toOriginal(
+          error.byteOffset === null ? 0 : positionAt(bytePositions(text), error.byteOffset),
+        ),
+      );
     }
     throw error;
   }

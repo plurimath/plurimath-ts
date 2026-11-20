@@ -67,8 +67,17 @@ a fallback grammar.
 The default AsciiMath parser is that same stage: `parseAsciimath` builds an
 amath-ts parser on first use, one parsanol runtime per decimal marker, as
 Ruby's `Asciimath::Parser` does through `Amath.parse_model` since plurimath
-8898451d. The handwritten AsciiMath grammar is gone. The other default parsers
-remain until their replacements pass their compatibility boundaries.
+8898451d. The handwritten AsciiMath grammar is gone. The default HTML parser
+also uses Parsanol: its three checked Ruby-derived PARG artifacts in
+`assets/html` are constructed lazily per decimal marker. The initialized HTML
+consumer still owns normalization, source maps, capture lowering and model
+mapping; `html/parsanol` remains the caller-initialized browser entry. The
+legacy HTML grammar is retained for raw-tree conformance tests, outside the
+default parsing path. Default LaTeX and UnicodeMath also use their shared
+latexmath-ts and umath-ts typed-model consumers with lazy decimal runtimes and
+checked PARG artifacts. The initialized entries remain independent of runtime
+construction for browser callers. The handwritten grammars remain only for
+raw-tree conformance; package gates exclude them from the default entries.
 
 ## 1. Contract
 

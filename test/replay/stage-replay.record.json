@@ -1,6 +1,6 @@
 {
   "asciimath": {
-    "commit": "025eff6747230fed73da1316f2dc9aebb6e98801",
+    "commit": "4a23df9293e78f44410ebbc806bf35dfde9a5534",
     "generation": 6,
     "snapshotDigest": "sha256:c5cb945ba50ba63fdb218ea424e248401bc2e2e3e3516a2bc23f13d062dab5d1",
     "facadeWriterProfile": {
@@ -51,7 +51,7 @@
     "differingRows": {}
   },
   "latex": {
-    "commit": "025eff6747230fed73da1316f2dc9aebb6e98801",
+    "commit": "4a23df9293e78f44410ebbc806bf35dfde9a5534",
     "generation": 4,
     "snapshotDigest": "sha256:a657a0c61602ffdc9c02f3533f8671f92e38c42ee679d50ded38efd0e69ae0ce",
     "facadeWriterProfile": {
@@ -186,7 +186,7 @@
     "differingRows": {}
   },
   "unicode": {
-    "commit": "025eff6747230fed73da1316f2dc9aebb6e98801",
+    "commit": "4a23df9293e78f44410ebbc806bf35dfde9a5534",
     "generation": 5,
     "snapshotDigest": "sha256:282fb3eead874618dda3229320a3a5d061434ea3766c8c95c641e07d49444b10",
     "facadeWriterProfile": {
@@ -207,7 +207,7 @@
     "differingRows": {}
   },
   "mathml": {
-    "commit": "025eff6747230fed73da1316f2dc9aebb6e98801",
+    "commit": "4a23df9293e78f44410ebbc806bf35dfde9a5534",
     "generation": 3,
     "snapshotDigest": "sha256:771765dbac3f08fd030c85fa2db7135d8620d81adf2373c7de04cc6a83cdaaeb",
     "facadeWriterProfile": {
@@ -241,7 +241,7 @@
     "differingRows": {}
   },
   "omml": {
-    "commit": "025eff6747230fed73da1316f2dc9aebb6e98801",
+    "commit": "4a23df9293e78f44410ebbc806bf35dfde9a5534",
     "generation": 2,
     "snapshotDigest": "sha256:1d8307a72fa48acfae8fd3e5f5bebecb941e02282aa265f3e9c168b96761d439",
     "facadeWriterProfile": {
@@ -271,7 +271,7 @@
     "differingRows": {}
   },
   "html": {
-    "commit": "025eff6747230fed73da1316f2dc9aebb6e98801",
+    "commit": "4a23df9293e78f44410ebbc806bf35dfde9a5534",
     "generation": 1,
     "snapshotDigest": "sha256:5c2e1feddfa18067ac4b42401ea7fc8bd8f02f576c7a4a40805127a90d42b9ac",
     "rows": 38,
@@ -285,7 +285,7 @@
     "differingRows": {}
   },
   "roundtrip": {
-    "commit": "025eff6747230fed73da1316f2dc9aebb6e98801",
+    "commit": "4a23df9293e78f44410ebbc806bf35dfde9a5534",
     "generation": 3,
     "snapshotDigest": "sha256:f7c46cac4ccac29988edc3b1db2b1d626cc3a0b8f716ab95c3353e3629411fe1",
     "rows": 136,

@@ -27,8 +27,10 @@ import { preprocess } from "../../../src/formats/unicodemath/preprocess";
 import { UnsupportedLocaleError } from "../../../src/formatting/index";
 import { loadPinnedCorpus, type PinnedRejection } from "../../core/corpus-pin";
 import { casesInInputFormat } from "../../core/model-builder";
+import { rejectionOffsetExceptions } from "../../core/rejection-offset-exceptions";
 
 const corpus = loadPinnedCorpus();
+const offsetExceptions = rejectionOffsetExceptions();
 
 /**
  * The UnicodeMath rejections, selected on the case's own `input_format`
@@ -175,7 +177,15 @@ describe("the port maps the UnicodeMath failure position back to the original in
         caught = error;
       }
       expect(caught, `${id} was accepted`).toBeInstanceOf(Error);
-      expect((caught as ParseError).index, id).toBe(PORT_INDEX.get(id));
+      const historical = PORT_INDEX.get(id);
+      const exception = offsetExceptions.get(id);
+      if (exception) {
+        expect(entry.input, id).toBe(exception.input);
+        expect(historical, id).toBe(exception.historicalOriginalOffset);
+      }
+      // Every row still requires a refusal and one exact offset. Exceptions
+      // name unchanged corpus bytes and a measured current-Ruby replacement.
+      expect((caught as ParseError).index, id).toBe(exception?.currentOriginalOffset ?? historical);
     },
   );
 

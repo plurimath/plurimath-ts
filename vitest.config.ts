@@ -19,6 +19,9 @@ if (!existsSync(join(PINNED_CORPUS_ROOT, "corpus", "provenance.yaml"))) {
 
 export default defineConfig({
   test: {
+    // Loading the checked multi-entry PARG artifacts takes 6-10 seconds on a
+    // cold Node runtime. Allow startup headroom; CI keeps its job deadline.
+    testTimeout: 30_000,
     include: ["test/**/*.spec.ts"],
     // These specs execute the Ruby in scripts/*.rb. Keep the default class-A
     // suite Node-only; the dedicated class-B config and CI job pin the Ruby

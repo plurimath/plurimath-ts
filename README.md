@@ -33,6 +33,9 @@ The current source and package entries provide:
 - Parsers exist for all six math formats, exposed on their subpaths and through
   the root `parse` function and compat constructor. The root and constructor
   also accept standalone UnitsML input.
+- Default HTML parsing uses the checked Ruby-derived PARG artifacts on the
+  Parsanol runtime, with one lazy runtime per decimal marker. Browser callers
+  can supply an initialized runtime through `./html/parsanol`.
 - Renderers exist for all six output formats: AsciiMath, LaTeX, MathML, HTML,
   UnicodeMath and OMML.
 - Nine package subpaths are built: `./core`, `./asciimath`, `./latex`,
@@ -490,9 +493,11 @@ depends on the milestone, like every other gate.
 
 Copyright Ribose. BSD 2-clause license.
 
-### Initialized LaTeX and Unicode stage parsers
+### Shared LaTeX and Unicode stage parsers
 
-`plurimath/latex/latexmath` exports `createLatexParser(binding)`; pass an initialized stage binding exposing `parsePreparedTree`. `plurimath/unicodemath/umath` exports `createUnicodemathParser(parser, artifact)`; pass the parser umath-ts `initialize()` returns and the text of its `artifacts/umath.json`. It reads umath's typed model, as the Ruby gem does. The facade handles its own preprocessing, locale validation, source offsets and equation labels. The returned synchronous parser yields the regular Formula tree for every existing writer. Initialization/artifact failures propagate without a handwritten-grammar fallback.
+The default LaTeX and UnicodeMath parsers use the checked latexmath-ts and umath-ts PARG artifacts with a lazily constructed runtime per decimal marker. They use the same typed-model consumers as the initialized entries below; artifact or runtime failures propagate without a handwritten-grammar fallback.
+
+`plurimath/latex/latexmath` exports `createLatexParser(binding)`; pass an initialized stage binding exposing `parse`. `plurimath/unicodemath/umath` exports `createUnicodemathParser(parser, artifact)`; pass the parser umath-ts `initialize()` returns and the text of its `artifacts/umath.json`. It reads umath's typed model, as the Ruby gem does. The facade handles its own preprocessing, locale validation, source offsets and equation labels. The returned synchronous parser yields the regular Formula tree for every existing writer. Initialization/artifact failures propagate without a handwritten-grammar fallback.
 
 Run `node scripts/check-text-stage-runtimes.mjs /absolute/latexmath-ts/dist/index.js /absolute/umath-ts/dist/index.js` after building both stage packages to check the actual WASM stages against the established Formula and writer behavior. Browser readiness depends on a browser-capable initialized engine.
 

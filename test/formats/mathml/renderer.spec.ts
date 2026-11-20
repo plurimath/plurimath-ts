@@ -5,13 +5,14 @@
  * the pinned oracle's own output (plurimath 0.11.6 at 00c52783; probes
  * probe-mathml-kinds.rb, probe-mathml-edges.rb, probe-mathml-edges3.rb in
  * the PR record), and every refusal marks a spot where the gem crashes or
- * where reproducing it would need an unmeasured subsystem
+ * The wrapper and thick-space expectations follow the current Ruby 0.11.20
+ * facade corpus (#476/#477); the earlier probes remain the source for the
+ * other rendering branches.
+ *
+ * Refusals also mark places where reproducing it would need an unmeasured subsystem
  * (TODO.plan/deferred.md).
  */
 
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { MissingSymbolDataError, RenderError } from "../../../src/core/errors";
 import {
@@ -47,16 +48,20 @@ const td = (...cells: MathNode[]) =>
 const tr = (...cells: MathNode[]) =>
   new UnaryFunctionNode({ name: "Tr", parameterOne: cells.map((cell) => cell) });
 
-/** The constant `<math>`/`<mstyle>` wrapper every full render carries. */
+/**
+ * The constant `<math>` wrapper every full render carries; `displaystyle`
+ * sits on `<math>` itself (plurimath#477). `inner` is written at the depth it
+ * had under the old `<mstyle>` wrapper, so it is lifted one level here.
+ */
 function math(inner: string, displaystyle = "true"): string {
   return (
-    `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">\n` +
-    `  <mstyle displaystyle="${displaystyle}">\n${inner}\n  </mstyle>\n</math>\n`
+    `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="${displaystyle}">\n` +
+    `${inner.replace(/^ {2}/gm, "")}\n</math>\n`
   );
 }
 
 const SIN_SPACED =
-  '    <mrow>\n      <mo rspace="thickmathspace"/>\n      <mrow>\n' +
+  '    <mrow>\n      <mo rspace="0.2778em"/>\n      <mrow>\n' +
   "        <mi>sin</mi>\n        <mi>x</mi>\n      </mrow>\n    </mrow>";
 const SIN_BARE = "    <mrow>\n      <mi>sin</mi>\n      <mi>x</mi>\n    </mrow>";
 
@@ -106,10 +111,9 @@ describe("the options matrix (probe-mathml-edges.rb)", () => {
     expect(toMathml(sinX(), { unaryFunctionSpacing: null })).toBe(math(SIN_BARE));
   });
 
-  it("an empty formula renders the self-closing mstyle", () => {
+  it("an empty formula renders a self-closing math", () => {
     expect(toMathml(new FormulaNode({ value: [] }))).toBe(
-      `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">\n` +
-        `  <mstyle displaystyle="true"/>\n</math>\n`,
+      `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true"/>\n`,
     );
   });
 });
@@ -243,9 +247,9 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
   });
 
   it('base Symbol: rspace attribute, {: empty mi, "" long form (probes symbol-*)', () => {
-    expect(
-      toMathml(formula(new SymbolNode({ value: "x", options: { rspace: "thickmathspace" } }))),
-    ).toBe(math('    <mo rspace="thickmathspace">x</mo>'));
+    expect(toMathml(formula(new SymbolNode({ value: "x", options: { rspace: "0.2778em" } })))).toBe(
+      math('    <mo rspace="0.2778em">x</mo>'),
+    );
     expect(toMathml(formula(new SymbolNode({ value: "{:" })))).toBe(math("    <mi/>"));
     expect(toMathml(formula(new SymbolNode({ value: "" })))).toBe(math("    <mi></mi>"));
     expect(toMathml(formula(new SymbolNode({ value: null })))).toBe(math("    <mi/>"));
@@ -287,9 +291,9 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     expect(toMathml(formula(new SymbolNode({ id: "Plus", value: "" })))).toBe(
       math("    <mo></mo>"),
     );
-    expect(
-      toMathml(formula(new SymbolNode({ id: "Plus", options: { rspace: "thickmathspace" } }))),
-    ).toBe(math("    <mo>+</mo>"));
+    expect(toMathml(formula(new SymbolNode({ id: "Plus", options: { rspace: "0.2778em" } })))).toBe(
+      math("    <mo>+</mo>"),
+    );
   });
 
   it("a number renders <mn>; nil is the long form; a finite JS number refuses (ambiguous)", () => {
@@ -354,16 +358,13 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     ).toThrow(RenderError);
   });
 
-  it("a live integral mask matches the scope probe; the inert nil-key mask renders", () => {
-    const measured = JSON.parse(
-      readFileSync(
-        join(dirname(fileURLToPath(import.meta.url)), "../unicodemath/scope-gap-fixtures.json"),
-        "utf8",
+  it("a live integral mask uses the current oracle wrapper; the inert nil-key mask renders", () => {
+    // Fresh Ruby 0.11.20 at 1a3033d0; the historical scope projection stays unchanged.
+    expect(toMathml(parseUnicodemath("∫1_a"))).toBe(
+      math(
+        "    <munderover>\n      <mo>&#x222b;</mo>\n      <mi>a</mi>\n      <mrow/>\n    </munderover>",
       ),
-    ) as { readonly cases: readonly { readonly input: string; readonly mathml?: string }[] };
-    const masked = measured.cases.find((entry) => entry.input === "∫1_a");
-    expect(masked?.mathml).toBeTypeOf("string");
-    expect(toMathml(parseUnicodemath("∫1_a"))).toBe(masked?.mathml);
+    );
     const inert = new IntNode({ parameterOne: x(), parameterTwo: y(), options: { mask: null } });
     expect(toMathml(formula(inert))).toBe(
       math(
@@ -504,11 +505,11 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
 
   it("fontStyle: carrier keyword table, verbatim miss, nil crash (probes fontstyle-carrier-*)", () => {
     expect(toMathml(formula(new FontStyleNode({ parameterOne: x(), parameterTwo: "bb" })))).toBe(
-      math('    <mstyle mathvariant="bold">\n      <mi>x</mi>\n    </mstyle>'),
+      math('    <mrow mathvariant="bold">\n      <mi>x</mi>\n    </mrow>'),
     );
     expect(
       toMathml(formula(new FontStyleNode({ parameterOne: x(), parameterTwo: "zznope" }))),
-    ).toBe(math('    <mstyle mathvariant="zznope">\n      <mi>x</mi>\n    </mstyle>'));
+    ).toBe(math('    <mrow mathvariant="zznope">\n      <mi>x</mi>\n    </mrow>'));
     expect(() =>
       toMathml(formula(new FontStyleNode({ parameterOne: x(), parameterTwo: null }))),
     ).toThrow(RenderError);
@@ -519,7 +520,7 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
       value: ["r", "e", "d"].map((letter) => new SymbolNode({ value: letter })),
     });
     expect(toMathml(formula(new ColorNode({ parameterOne: red, parameterTwo: x() })))).toBe(
-      math('    <mstyle mathcolor="red">\n      <mi>x</mi>\n    </mstyle>'),
+      math('    <mrow mathcolor="red">\n      <mi>x</mi>\n    </mrow>'),
     );
     expect(
       toMathml(
@@ -531,7 +532,7 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
           }),
         ),
       ),
-    ).toBe(math('    <mstyle mathbackground="red">\n      <mi>x</mi>\n    </mstyle>'));
+    ).toBe(math('    <mrow mathbackground="red">\n      <mi>x</mi>\n    </mrow>'));
     const frac = new ColorNode({
       parameterOne: new FracNode({ parameterOne: x(), parameterTwo: y() }),
       parameterTwo: new SymbolNode({ value: "z" }),
@@ -545,14 +546,14 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     // quotes, and the engine wrapper's write decodes them. Oracle bytes:
     // mathcolor="∑" (U+2211, e2 88 91), NOT the raw "&#x2211;".
     expect(toMathml(parseAsciimath('color("&#x2211;")(x)'))).toBe(
-      math('    <mstyle mathcolor="∑">\n      <mi>x</mi>\n    </mstyle>'),
+      math('    <mrow mathcolor="∑">\n      <mi>x</mi>\n    </mrow>'),
     );
     // The strip runs BEFORE the decode, as in the gem (mathml_options gsubs
     // the hash value, update_attrs decodes at write time): a space ENTITY
     // survives the whitespace strip and decodes into a literal space —
     // oracle: mathcolor=" a". Decode-then-strip would emit "a".
     expect(toMathml(parseAsciimath('color("&#x20;a")(x)'))).toBe(
-      math('    <mstyle mathcolor=" a">\n      <mi>x</mi>\n    </mstyle>'),
+      math('    <mrow mathcolor=" a">\n      <mi>x</mi>\n    </mrow>'),
     );
     // The mathbackground key takes the same decoded path (probed hand-built:
     // the gem's parse never sets backgroundcolor, options only carry it).
@@ -568,7 +569,7 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
           }),
         ),
       ),
-    ).toBe(math('    <mstyle mathbackground="∑">\n      <mi>x</mi>\n    </mstyle>'));
+    ).toBe(math('    <mrow mathbackground="∑">\n      <mi>x</mi>\n    </mrow>'));
   });
 
   it("bar attributes: entity decode, nil value, empty skips, junk refusals (probes bar-*)", () => {
@@ -593,7 +594,7 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     const marked = new BarNode({ parameterOne: x(), attributes: { unitsml: "true" } });
     const output = toMathml(formula(marked));
     expect(output).not.toContain("unitsml=");
-    expect(output).not.toContain('rspace="thickmathspace"');
+    expect(output).not.toContain('rspace="0.2778em"');
     expect(output).toBe(toMathml(formula(new BarNode({ parameterOne: x() }))));
   });
 
@@ -601,7 +602,7 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     const marked = new BarNode({ parameterOne: x(), attributes: { unitsml: "true" } });
     const output = toMathml(new FormulaNode({ value: [x(), marked] }));
     expect(output).not.toContain("unitsml=");
-    expect(output).toContain('rspace="thickmathspace"');
+    expect(output).toContain('rspace="0.2778em"');
   });
 
   it("powerbase: an underover symbol base flips the tag; a Nary base crashes (probed)", () => {

@@ -153,6 +153,8 @@ unless loaded&.start_with?(lib)
         "An installed gem answers from a different version."
 end
 
+# These canonical fixtures specify Ox independently of Lutaml's default.
+Lutaml::Model::Config.xml_adapter_type = :ox
 adapter = Lutaml::Model::Config.xml_adapter
 unless adapter == Lutaml::Xml::Adapter::OxAdapter
   abort "REFUSING: Lutaml's XML adapter is #{adapter.inspect}, not OxAdapter."

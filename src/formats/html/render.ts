@@ -1,4 +1,4 @@
-import type { MathNode, NodeKind } from "../../core/index";
+import { type MathNode, type NodeKind, RenderError } from "../../core/index";
 import { renderAbs } from "../../render/abs/html";
 import { renderBar } from "../../render/bar/html";
 import { renderBase } from "../../render/base/html";
@@ -42,7 +42,7 @@ import { renderVec } from "../../render/vec/html";
 import type { NumberFormat, RenderContext, RenderFn, UnitsmlRenderOptions } from "./render-shared";
 
 /** One measured renderer per `NodeKind`; `nary` is the gem-matching refusal entry. */
-const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
+const RENDERERS: { readonly [K in Exclude<NodeKind, "annotation">]: RenderFn<K> } = {
   abs: renderAbs,
   bar: renderBar,
   base: renderBase,
@@ -86,7 +86,12 @@ const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
 };
 
 function renderNode(node: MathNode, context: RenderContext): string | null {
-  const render = RENDERERS[node.kind] as RenderFn<NodeKind>;
+  const kind = node.kind;
+  // Annotation is a mapping node; Ruby has no standalone renderer for it.
+  if (kind === "annotation") {
+    throw new RenderError("Annotation is a mapping node with no Ruby renderer", "html", kind);
+  }
+  const render = RENDERERS[kind] as RenderFn<NodeKind>;
   return render(node, context);
 }
 

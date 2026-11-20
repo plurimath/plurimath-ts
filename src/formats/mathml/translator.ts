@@ -1016,6 +1016,11 @@ function textNode(text: string): DraftValue {
 function mathToFormula(node: MmlNode): Draft {
   let values: Draft[] = naryCheck(children(node));
   let displayStyle: unknown = booleanToDisplaystyle(attr(node, "display"));
+  // plurimath#477 output carries displaystyle on <math> itself.
+  const ownDisplaystyle = attr(node, "displaystyle");
+  if (ownDisplaystyle !== null && ownDisplaystyle !== "") {
+    displayStyle = booleanToDisplaystyle(ownDisplaystyle);
+  }
   const first = values[0];
   if (values.length === 1 && first !== undefined && isMstyle(first)) {
     values = formulaValue(first) as Draft[];
@@ -1027,6 +1032,9 @@ function mathToFormula(node: MmlNode): Draft {
 function mrowToMrow(node: MmlNode): DraftValue {
   const marker = attr(node, "intent");
   if (isUncertaintyMarker(marker)) return mrowToUncertainty(node, marker);
+  // An mrow carrying mathcolor/mathvariant is what plurimath#477 emits in
+  // place of <mstyle>; read it back the same way.
+  if (isStyledMrow(node)) return mstyleToMstyle(node);
   const values = children(node);
   if (values.length === 0) return null;
   const combined = naryCheck(combineFunctionWithParens(values));
@@ -1272,6 +1280,12 @@ function normalizePhantomChild(child: DraftValue): DraftValue {
   else if (child.cls === `${FUNCTION}Ms`) child.f.parameter_one = null;
   else child.f.value = null;
   return child;
+}
+
+function isStyledMrow(node: MmlNode): boolean {
+  const color = attr(node, "mathcolor");
+  const variant = attr(node, "mathvariant");
+  return (color !== null && color !== "") || (variant !== null && variant !== "");
 }
 
 function mstyleToMstyle(node: MmlNode): DraftValue {

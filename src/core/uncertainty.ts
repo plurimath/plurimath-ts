@@ -210,13 +210,14 @@ const FIELD_NAMES = {
   upper: "upper",
   intervalKind: "interval_kind",
   magnitude: "magnitude",
+  distribution: "distribution",
 } as const;
 
 type CheckedField = keyof typeof FIELD_NAMES;
 
 function forbid(node: UncertaintyData, ...fields: CheckedField[]): void {
   for (const field of fields) {
-    if (node[field] === null) continue;
+    if (node[field] === null || (field === "distribution" && node[field] === undefined)) continue;
     invalid(`${FIELD_NAMES[field]} does not apply to a ${node.category} uncertainty`);
   }
 }
@@ -229,6 +230,10 @@ function requireFields(node: UncertaintyData, ...fields: CheckedField[]): void {
 }
 
 function validateStandard(node: UncertaintyData): void {
+  // Uncertainty::DISTRIBUTIONS, measured on the pinned 0.11.20 oracle.
+  if (node.distribution != null && !["rect", "triang", "arcsine"].includes(node.distribution)) {
+    invalid(`unknown distribution ${inspectSymbol(node.distribution)}`);
+  }
   forbid(node, "coverageFactor", "coverageProbability", "lower", "upper", "intervalKind");
   requireFields(node, "magnitude");
   if (node.notation === null || !UNCERTAINTY_NOTATIONS.includes(node.notation)) {
@@ -243,7 +248,7 @@ function validateStandard(node: UncertaintyData): void {
 }
 
 function validateExpanded(node: UncertaintyData): void {
-  forbid(node, "lower", "upper", "intervalKind");
+  forbid(node, "lower", "upper", "intervalKind", "distribution");
   requireFields(node, "magnitude", "coverageFactor");
   const factor = text(node.coverageFactor);
   if (!positive(factor)) invalid(`coverage factor ${factor} must be greater than 0`);
@@ -251,7 +256,7 @@ function validateExpanded(node: UncertaintyData): void {
 }
 
 function validateCoverageInterval(node: UncertaintyData): void {
-  forbid(node, "magnitude", "coverageFactor");
+  forbid(node, "magnitude", "coverageFactor", "distribution");
   requireFields(node, "lower", "upper", "coverageProbability");
   if (node.intervalKind !== null && !UNCERTAINTY_INTERVAL_KINDS.includes(node.intervalKind)) {
     invalid(`unknown interval kind ${inspectSymbol(node.intervalKind)}`);

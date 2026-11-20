@@ -300,31 +300,31 @@ const LAYOUT: ReadonlyArray<
   [
     "1234.5",
     { notation: "scientific" },
-    '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">\n  <mstyle displaystyle="true">\n    <mrow>\n      <mn>1.234\'5</mn>\n      <mo>x</mo>\n      <msup>\n        <mn>10</mn>\n        <mn>3</mn>\n      </msup>\n    </mrow>\n  </mstyle>\n</math>\n',
+    '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">\n  <mrow>\n    <mn>1.234\'5</mn>\n    <mo>x</mo>\n    <msup>\n      <mn>10</mn>\n      <mn>3</mn>\n    </msup>\n  </mrow>\n</math>\n',
     "1.234'5 x 10^3",
   ],
   [
     "-0.00123",
     { notation: "engineering", numberSign: "plus", times: null },
-    '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">\n  <mstyle displaystyle="true">\n    <mrow>\n      <mn>-1.23</mn>\n      <mo>\u00d7</mo>\n      <msup>\n        <mn>10</mn>\n        <mn>-3</mn>\n      </msup>\n    </mrow>\n  </mstyle>\n</math>\n',
+    '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">\n  <mrow>\n    <mn>-1.23</mn>\n    <mo>\u00d7</mo>\n    <msup>\n      <mn>10</mn>\n      <mn>-3</mn>\n    </msup>\n  </mrow>\n</math>\n',
     "-1.23 \u00d7 10^-3",
   ],
   [
     "-0.00123",
     { notation: "scientific", exponentSign: "plus", times: "<" },
-    '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">\n  <mstyle displaystyle="true">\n    <mrow>\n      <mn>-1.23</mn>\n      <mo>&lt;</mo>\n      <msup>\n        <mn>10</mn>\n        <mn>-3</mn>\n      </msup>\n    </mrow>\n  </mstyle>\n</math>\n',
+    '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">\n  <mrow>\n    <mn>-1.23</mn>\n    <mo>&lt;</mo>\n    <msup>\n      <mn>10</mn>\n      <mn>-3</mn>\n    </msup>\n  </mrow>\n</math>\n',
     "-1.23 < 10^-3",
   ],
   [
     "1234.5",
     { notation: "e", e: "&" },
-    '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">\n  <mstyle displaystyle="true">\n    <mn>1.234\'5&3</mn>\n  </mstyle>\n</math>\n',
+    '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">\n  <mn>1.234\'5&3</mn>\n</math>\n',
     "1.234'5&3",
   ],
   [
     "5",
     { notation: "engineering", exponentSign: "plus" },
-    '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">\n  <mstyle displaystyle="true">\n    <mrow>\n      <mn>5</mn>\n      <mo>x</mo>\n      <msup>\n        <mn>10</mn>\n        <mn>0</mn>\n      </msup>\n    </mrow>\n  </mstyle>\n</math>\n',
+    '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">\n  <mrow>\n    <mn>5</mn>\n    <mo>x</mo>\n    <msup>\n      <mn>10</mn>\n      <mn>0</mn>\n    </msup>\n  </mrow>\n</math>\n',
     "5 x 10^0",
   ],
 ];

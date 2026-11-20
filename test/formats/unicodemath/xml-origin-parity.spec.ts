@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { normalize, ParseError } from "../../../src/core/index";
 import { parseUnicodemath } from "../../../src/formats/unicodemath/index";
 import { buildUnicodemathTransform } from "../../../src/formats/unicodemath/transform";
+import { currentSourceProfile } from "./current-profile";
 import { expectSupersededAtPin, SUPERSEDED_AT_PIN } from "./superseded-at-pin";
 
 interface Witness {
@@ -65,6 +66,8 @@ const current = fixtures.cases.filter((entry) => !SUPERSEDED_AT_PIN.has(entry.in
 const parsed = current.filter((entry) => entry.model !== undefined);
 const refused = current.filter((entry) => entry.raises !== undefined);
 
+const sourceProfile = currentSourceProfile("xml-origin");
+
 describe("the XML-origin UnicodeMath observations", () => {
   it("retains the pinned measurement and candidate provenance", () => {
     expect(fixtures.schema).toBe("plurimath-unicodemath-xml-origin/1");
@@ -119,8 +122,8 @@ describe("the XML-origin UnicodeMath observations", () => {
     // Rules added at plurimath 2967dcc4 carry that prefix; the measured
     // registration below is 00c52783's, which has none of them.
     const all = buildUnicodemathTransform().ruleIds;
-    const ported = all.filter((id) => !id.startsWith("2967dcc4:"));
-    expect(all.length - ported.length).toBe(5);
+    const ported = all.filter((id) => !id.startsWith("2967dcc4:") && !id.startsWith("01120:"));
+    expect(all.length - ported.length).toBe(6);
     const unreachable = metadata.unreachableRuleIds;
     const registered = metadata.registeredRuleIds;
     expect(ported.length).toBe(484);
@@ -136,7 +139,9 @@ describe("the XML-origin UnicodeMath observations", () => {
   it.each(parsed.map((entry) => [entry.input, entry] as const))(
     "%j: the public parser reproduces the measured Ruby model",
     (_input, entry) => {
-      expect(normalize(parseUnicodemath(entry.input))).toStrictEqual(entry.model);
+      expect(normalize(parseUnicodemath(entry.input))).toStrictEqual(
+        sourceProfile.get(entry.input)?.model,
+      );
     },
   );
 

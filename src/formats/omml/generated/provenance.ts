@@ -30,24 +30,28 @@ export const OMML_DATA_GENERATED_PROVENANCE: OmmlDataGeneratedProvenance = {
   generatorInputs: new Map([
     [
       "scripts/generate-core-data.rb",
-      "6c3cdec230b1a640e14e2fb8ce212d992914e5c1d502f963a2fcdbad2467de71",
+      "f0ff2e2218d2ba7a54fd73fcfbcaeaddecdbe05220d0480f3294929cd0568a14",
     ],
     [
       "scripts/generate-corpus.rb",
-      "82630cc145295b12b23443c853b5d2841cd7e293c607092409a050e67fc27868",
+      "38f4873f087ac47bee7ac59772a4e30f22590a2bed26bd3ded0149510c5b398b",
     ],
     [
       "scripts/generate-mathml-data.rb",
-      "0b0c0e45845578f1f6e8da204ded48dfb515a27ec1bfc0ad59f025fa2e48ae8a",
+      "e93da2d571ac2c21413f1bf9d14e53d1354b6d49ceba1057bcb03cdd2422b901",
     ],
     [
       "scripts/generate-omml-data.rb",
       "a4d7dcbca70bfe06d05d6fd90c68559ed40fc379dbc9c4261d498d60450b76a0",
     ],
+    [
+      "scripts/oracle-model-fields.rb",
+      "e1fc7d625191302cf1adc176de1a853a91461e5a73b3e4674af91879fce8089a",
+    ],
   ]),
   oracle: "plurimath",
-  oracleVersion: "0.11.17",
-  oracleCommit: "2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256",
+  oracleVersion: "0.11.20",
+  oracleCommit: "1a3033d0881d6c6ba655ab3ce00e0dc3cccfe5b4",
   oracleClean: true,
   generatorClean: true,
   rubyEngine: "ruby",

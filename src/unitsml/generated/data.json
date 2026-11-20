@@ -30691,6 +30691,7 @@
     "Math::Function::Sec": "unaryFunction",
     "Math::Function::Sech": "unaryFunction",
     "Math::Function::Semantics": "binaryFunction",
+    "Math::Function::Semantics::Annotation": "annotation",
     "Math::Function::Sin": "unaryFunction",
     "Math::Function::Sinh": "unaryFunction",
     "Math::Function::Sqrt": "sqrt",
@@ -123084,6 +123085,14 @@
               "lang": "en"
             }
           ],
+          "symbols": [
+            {
+              "unicode": "Fr.",
+              "ascii": "CHF",
+              "id": "CHF-franc",
+              "ambiguous": true
+            }
+          ],
           "minor_unit_exponent": 2,
           "status": "active",
           "unit_system_reference": [
@@ -123228,6 +123237,19 @@
             {
               "value": "Renminbi",
               "lang": "en"
+            }
+          ],
+          "symbols": [
+            {
+              "unicode": "CN¥",
+              "ascii": "CNY",
+              "id": "CNY-yuan"
+            },
+            {
+              "unicode": "¥",
+              "ascii": "CNY",
+              "id": "CNY-yuan-bare",
+              "ambiguous": true
             }
           ],
           "minor_unit_exponent": 2,
@@ -124616,7 +124638,8 @@
             {
               "unicode": "¥",
               "ascii": "JPY",
-              "id": "JPY"
+              "id": "JPY",
+              "ambiguous": true
             }
           ],
           "minor_unit_exponent": 0,
@@ -127431,6 +127454,12 @@
               "unicode": "US$",
               "ascii": "USD",
               "id": "USD"
+            },
+            {
+              "unicode": "$",
+              "ascii": "USD",
+              "id": "USD-dollar",
+              "ambiguous": true
             }
           ],
           "minor_unit_exponent": 2,
@@ -140590,6 +140619,11 @@
             "id": {
               "type": "string",
               "description": "Stable symbol id"
+            },
+            "ambiguous": {
+              "type": "boolean",
+              "default": false,
+              "description": "The presentation is shared across currencies (bare $, the bare yen sign, the franc Fr.) and therefore carries no unambiguous unit semantics; strict-unit consumers skip it, prose style-enforcement consumers match it"
             }
           }
         },
@@ -153925,9 +153959,13 @@
           "root_units": [
             {
               "power": 1,
+              "prefix_reference": {
+                "type": "nist",
+                "id": "NISTp10_2"
+              },
               "unit_reference": {
                 "type": "nist",
-                "id": "NISTu203"
+                "id": "NISTu201"
               }
             }
           ],
@@ -167584,6 +167622,10 @@
           "root_units": [
             {
               "power": 1,
+              "prefix_reference": {
+                "type": "nist",
+                "id": "NISTp10_3"
+              },
               "unit_reference": {
                 "type": "nist",
                 "id": "NISTu196"

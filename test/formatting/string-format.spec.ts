@@ -70,7 +70,7 @@ describe("measured string_format cases", () => {
       expect(toHtml(node, { formatter })).toBe(want.html);
       expect(toUnicodemath(node, { formatter })).toBe(want.unicodemath);
       expect(
-        inside(toMathml(node, { formatter }), /<mstyle displaystyle="true">(.*)<\/mstyle>/s),
+        inside(toMathml(node, { formatter }), /<math[^>]* displaystyle="true">(.*)<\/math>/s),
       ).toBe(want.mathml);
       expect(inside(toOmml(node, { formatter }), /<m:oMath>(.*)<\/m:oMath>/s)).toBe(want.omml);
     },

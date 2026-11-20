@@ -16,8 +16,10 @@
  *
  *   - legacy facade cases (`plurimath-corpus/<format>/1|2`): `input` is parsed
  *     with the port's parser for its notation and rendered to every declared
- *     target; each rendering must be byte-identical, each recorded refusal
- *     must be a render-time refusal here too;
+ *     target. Inputs, calls and models must match the current facade corpus
+ *     at this testsuite pin; writer bytes/refusals use that explicitly named
+ *     source profile. The immutable historical writer observations remain in
+ *     the stage generation. The committed record names the writer oracle;
  *   - legacy rejections (`plurimath-corpus/rejections/1`): the port must
  *     refuse with a `ParseError`; where the gem's offset is into an input
  *     preprocessing left unchanged, the port's offset must be the same;
@@ -43,6 +45,7 @@
  *     (`nodeEquals` between the formula read back and the one parsed).
  */
 
+import { isDeepStrictEqual } from "node:util";
 import { type Decimal, Model } from "@plurimath/amath-ts/browser";
 import type { FormulaNode, MathNode } from "../../src/core/index";
 import { ParseError } from "../../src/core/index";
@@ -70,7 +73,14 @@ import type {
 import { parse } from "../../src/parse";
 import type { ParseValue } from "../../src/pegkit/index";
 import { ParseFailed, Slice } from "../../src/pegkit/index";
-import { type PinnedCall, readCorpusPayload } from "../core/corpus-pin";
+import {
+  loadPinnedCorpus,
+  type PinnedCall,
+  type PinnedCallCase,
+  type PinnedCase,
+  type PinnedCorpus,
+  readCorpusPayload,
+} from "../core/corpus-pin";
 import type { YamlValue } from "../core/corpus-yaml";
 import type { StageOutcomes } from "./stage-packages";
 import {
@@ -241,6 +251,36 @@ function callOptions(call: PinnedCall): RenderOptions {
   };
 }
 
+let currentFacade: PinnedCorpus | undefined;
+function facadeCorpus(): PinnedCorpus {
+  currentFacade ??= loadPinnedCorpus();
+  return currentFacade;
+}
+
+/** The current writer profile, with the historical input/call/model retained. */
+export function compareCurrentFacade(entry: PinnedCase | PinnedCallCase): Outcome {
+  const currentFacade = facadeCorpus();
+  const called = "call" in entry;
+  const id = entry.id.replace(/-r[0-9]+$/, "");
+  const candidates = called ? currentFacade.calls : currentFacade.cases;
+  const current = candidates.find((row) => row.inputFormat === entry.inputFormat && row.id === id);
+  if (current === undefined)
+    return differ(`current facade profile has no ${entry.inputFormat}/${id}`);
+  if (entry.input !== current.input || !isDeepStrictEqual(entry.model, current.model)) {
+    return differ("current facade profile changes the historical input or model");
+  }
+  if (called && !("call" in current && isDeepStrictEqual(entry.call, current.call))) {
+    return differ("current facade profile changes the historical call");
+  }
+  return compareTargets(
+    entry.input,
+    entry.inputFormat,
+    current.expected,
+    current.refusals,
+    called ? callOptions(entry.call) : undefined,
+  );
+}
+
 function replayLegacy(payload: StagePayload): RowResult[] | undefined {
   const read = readCorpusPayload(payload.path, payload.document);
   if (read === undefined) return undefined;
@@ -253,26 +293,10 @@ function replayLegacy(payload: StagePayload): RowResult[] | undefined {
   switch (read.kind) {
     case "cases":
       return read.payload.cases.map((entry) =>
-        row(
-          entry.id,
-          "facade",
-          compareTargets(entry.input, entry.inputFormat, entry.expected, entry.refusals),
-        ),
+        row(entry.id, "facade", compareCurrentFacade(entry)),
       );
     case "calls":
-      return read.payload.cases.map((entry) =>
-        row(
-          entry.id,
-          "calls",
-          compareTargets(
-            entry.input,
-            entry.inputFormat,
-            entry.expected,
-            entry.refusals,
-            callOptions(entry.call),
-          ),
-        ),
-      );
+      return read.payload.cases.map((entry) => row(entry.id, "calls", compareCurrentFacade(entry)));
     case "rejections":
       return read.payload.cases.map((entry) => {
         const result = parseOrError(entry.input, entry.inputFormat);
@@ -699,20 +723,29 @@ function replayStage(
 const STAGE_SCHEMA = /^plurimath-stage\/(?:[a-z]+\/cases\/1|roundtrip\/1)$/;
 
 /**
- * Append-only supersessions (the text-unitsml-valid-r2 pattern; plurimath
- * scripts/replay_stage_roundtrips.rb does the same): a row whose id has an
- * -r2 sibling is kept in the generation for history and superseded by that
- * sibling, so it is not compared.
+ * Append-only revisions keep their history. Compare only the highest numeric
+ * -rN sibling, as Ruby's scripts/replay_stage_roundtrips.rb does. Stage model
+ * ids may put the revision before a .model/.model-roundtrip boundary suffix.
  */
-export const SUPERSEDED = "superseded by its -r2 sibling, which is replayed instead";
+export const SUPERSEDED = "superseded by its latest -rN sibling, which is replayed instead";
 
-function classifySupersessions(results: RowResult[]): RowResult[] {
-  const superseded = new Set(
-    results.filter((row) => row.id.includes("-r2")).map((row) => row.id.replace("-r2", "")),
-  );
-  return results.map((row) =>
-    superseded.has(row.id) ? { ...row, status: "unsupported", note: SUPERSEDED } : row,
-  );
+function revision(id: string): readonly [string, number] {
+  const match = /^(.*)-r([0-9]+)(\.[a-z-]+)?$/.exec(id);
+  return match ? [`${match[1]}${match[3] ?? ""}`, Number(match[2])] : [id, 1];
+}
+
+export function classifySupersessions(results: RowResult[]): RowResult[] {
+  const latest = new Map<string, number>();
+  for (const row of results) {
+    const [base, number] = revision(row.id);
+    latest.set(base, Math.max(latest.get(base) ?? 0, number));
+  }
+  return results.map((row) => {
+    const [base, number] = revision(row.id);
+    return number < (latest.get(base) ?? number)
+      ? { ...row, status: "unsupported", note: SUPERSEDED }
+      : row;
+  });
 }
 
 /** Every row of the generation, in payload then file order. */
@@ -738,6 +771,11 @@ export interface LanguageRecord {
   readonly commit: string;
   readonly generation: number;
   readonly snapshotDigest: string;
+  /** Writer bytes come from this pin's current facade corpus, never edited stage history. */
+  readonly facadeWriterProfile?: {
+    readonly name: "current-facade-corpus";
+    readonly oracleCommit: string;
+  };
   readonly rows: number;
   readonly equal: number;
   readonly differing: number;
@@ -781,6 +819,14 @@ export function summarize(
     commit: generation.pin.commit,
     generation: generation.pin.generation,
     snapshotDigest: generation.pin.snapshotDigest,
+    ...(results.some((row) => row.kind === "facade" || row.kind === "calls")
+      ? {
+          facadeWriterProfile: {
+            name: "current-facade-corpus" as const,
+            oracleCommit: facadeCorpus().provenance.oracleCommit,
+          },
+        }
+      : {}),
     rows: results.length,
     equal: count("equal"),
     differing: count("differing"),

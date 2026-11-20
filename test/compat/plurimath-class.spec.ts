@@ -43,13 +43,11 @@ const GEM_OUTPUT = {
  * `GEM_OUTPUT` because they are multi-line documents.
  */
 const GEM_MATHML = [
-  '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">',
-  '  <mstyle displaystyle="true">',
-  "    <mfrac>",
-  "      <mn>1</mn>",
-  "      <mn>2</mn>",
-  "    </mfrac>",
-  "  </mstyle>",
+  '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">',
+  "  <mfrac>",
+  "    <mn>1</mn>",
+  "    <mn>2</mn>",
+  "  </mfrac>",
   "</math>",
   "",
 ].join("\n");
@@ -535,9 +533,9 @@ describe("toDisplay", () => {
      */
     it("FontStyle's font-family line is the canonical name under mathml/omml, not the alias tag", () => {
       expect(new Plurimath("bb x", "asciimath").toDisplay("mathml")).toBe(
-        '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">' +
-          '<mstyle displaystyle="true"><mstyle mathvariant="bold"><mi>x</mi></mstyle></mstyle>' +
-          '</math>"\n     |_ "<mstyle mathvariant="bold"><mi>x</mi></mstyle>" function apply\n' +
+        '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">' +
+          '<mrow mathvariant="bold"><mi>x</mi></mrow>' +
+          '</math>"\n     |_ "<mrow mathvariant="bold"><mi>x</mi></mrow>" function apply\n' +
           '        |_ "bold" font family\n        |_ "<mi>x</mi>" argument\n',
       );
       expect(
@@ -611,8 +609,8 @@ describe("toDisplay", () => {
 
     it("Vec swaps in an overset header with an explicit base line under mathml/omml", () => {
       expect(new Plurimath("vec(v)", "asciimath").toDisplay("mathml")).toBe(
-        '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">' +
-          '<mstyle displaystyle="true"><mover><mi>v</mi><mo>&#x2192;</mo></mover></mstyle></math>"\n' +
+        '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">' +
+          '<mover><mi>v</mi><mo>&#x2192;</mo></mover></math>"\n' +
           '     |_ "<mover><mi>v</mi><mo>&#x2192;</mo></mover>" overset\n' +
           '        |_ "<mo>&#x2192;</mo>" base\n        |_ "<mi>v</mi>" supscript\n',
       );
@@ -884,19 +882,19 @@ describe("toDisplay", () => {
           '        |_ "x" denominator\n',
       );
       expect(build().toDisplay("mathml")).toBe(
-        '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">' +
-          '<mstyle displaystyle="true"><munder><mo>lim</mo><mrow><mi>x</mi><mo>&#x2192;</mo>' +
-          '<mn>0</mn></mrow></munder><mfrac><mrow><mo rspace="thickmathspace"/><mrow><mi>sin</mi>' +
-          "<mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mi>x</mi></mfrac></mstyle>" +
+        '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">' +
+          "<munder><mo>lim</mo><mrow><mi>x</mi><mo>&#x2192;</mo>" +
+          '<mn>0</mn></mrow></munder><mfrac><mrow><mo rspace="0.2778em"/><mrow><mi>sin</mi>' +
+          "<mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mi>x</mi></mfrac>" +
           '</math>"\n' +
           '     |_ "<munder><mo>lim</mo><mrow><mi>x</mi><mo>&#x2192;</mo><mn>0</mn></mrow></munder>"' +
           " limit\n" +
           '     |  |_ "<mrow><mi>x</mi><mo>&#x2192;</mo><mn>0</mn></mrow>" limit subscript\n' +
-          '     |_ "<mfrac><mrow><mo rspace="thickmathspace"/><mrow><mi>sin</mi><mrow><mo>(</mo>' +
+          '     |_ "<mfrac><mrow><mo rspace="0.2778em"/><mrow><mi>sin</mi><mrow><mo>(</mo>' +
           '<mi>x</mi><mo>)</mo></mrow></mrow></mrow><mi>x</mi></mfrac>" fraction\n' +
-          '        |_ "<mrow><mo rspace="thickmathspace"/><mrow><mi>sin</mi><mrow><mo>(</mo>' +
+          '        |_ "<mrow><mo rspace="0.2778em"/><mrow><mi>sin</mi><mrow><mo>(</mo>' +
           '<mi>x</mi><mo>)</mo></mrow></mrow></mrow>" numerator\n' +
-          '        |  |_ "<mrow><mo rspace="thickmathspace"/><mrow><mi>sin</mi><mrow><mo>(</mo>' +
+          '        |  |_ "<mrow><mo rspace="0.2778em"/><mrow><mi>sin</mi><mrow><mo>(</mo>' +
           '<mi>x</mi><mo>)</mo></mrow></mrow></mrow>" function apply\n' +
           '        |     |_ "sin" function name\n' +
           '        |     |_ "<mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow>" argument\n' +
@@ -1065,8 +1063,8 @@ describe("toDisplay keeps a Unicode space after a line feed, as Ruby's \\s does"
     for (const [input, format] of inputs(c)) {
       it(`U+${code.toString(16).toUpperCase().padStart(4, "0")} in ${format}`, () => {
         expect(new Plurimath(input, format).toDisplay("mathml")).toBe(
-          '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">' +
-            `<mstyle displaystyle="true"><mtext>a${c}b</mtext></mstyle></math>"\n` +
+          '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">' +
+            `<mtext>a${c}b</mtext></math>"\n` +
             `     |_ "<mtext>a${c}b</mtext>" text\n`,
         );
       });
@@ -1112,8 +1110,8 @@ describe("toDisplay strips ASCII whitespace from a Left/Right delimiter line", (
   for (const [delimiter, root, leaf] of cases) {
     it(`delimiter ${JSON.stringify(delimiter)}`, () => {
       expect(buildTreeDump(leftRight(delimiter), "mathml")).toBe(
-        '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">' +
-          `<mstyle displaystyle="true"><mo>${root}</mo><mi>x</mi><mo>${root}</mo></mstyle></math>"\n` +
+        '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">' +
+          `<mo>${root}</mo><mi>x</mi><mo>${root}</mo></math>"\n` +
           `     "<mo>${leaf}</mo>" left\n     "<mtext>x</mtext>" text\n     "<mo>${leaf}</mo>" right\n`,
       );
       expect(buildTreeDump(leftRight(delimiter), "omml").split("\n").slice(-4)).toEqual([

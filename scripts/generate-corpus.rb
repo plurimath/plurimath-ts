@@ -72,6 +72,7 @@ require "digest"
 require "fileutils"
 require "yaml"
 require "json"
+require_relative "oracle-model-fields"
 
 module CorpusGenerator
   REPO_ROOT = File.expand_path("..", __dir__)
@@ -192,6 +193,7 @@ module CorpusGenerator
     Math::Formula
     Math::Function::BinaryFunction
     Math::Function::Nary
+    Math::Function::Semantics::Annotation
     Math::Function::Table
     Math::Function::TernaryFunction
     Math::Function::Uncertainty
@@ -1014,7 +1016,7 @@ module CorpusGenerator
     end
 
     fields.delete("unitsml") if class_key(klass) == "Math::Function::Unitsml"
-    fields.uniq.sort
+    (fields + OracleModelFields.declared_fields(klass)).uniq.sort
   end
 
   # How many positional arguments a class's `initialize` demands. Everything
@@ -1660,7 +1662,6 @@ module CorpusGenerator
 
     symbols = Plurimath::Utility.symbols_hash(INPUT_FORMAT.to_sym)
     parens = Plurimath::Utility.parens_hash(INPUT_FORMAT.to_sym)
-    literals = Plurimath::Asciimath::Constants.precompile_constants
 
     # `Utility.all_symbols_classes` is symbols merged with parens, parens last,
     # and that merged table is what the transform resolves input through. Ruby's
@@ -1683,81 +1684,14 @@ module CorpusGenerator
       "input" => stable_order(merged.map { |text, klass| [text, id_for.call(klass)] }),
       "paren_inputs" => paren_pairs.map(&:first),
       "collisions" => collisions,
-      "literals" => longest_first("precompile_constants",
-                                  literals.map { |text, kind| [text, kind.to_s] }),
-      "literal_kinds" => literals.values.map(&:to_s).uniq.sort,
-      "skip_input_parens" => Plurimath::Asciimath::Constants::SKIP_INPUT_PARENS.to_a,
       "counts" => {
         "symbols" => symbols.length,
         "parens" => parens.length,
         "merged" => merged.length,
-        "literals" => literals.length,
       },
     }
   end
 
-  # --- asciimath grammar tables --------------------------------------------
-
-  # The five `Asciimath::Constants` that `Asciimath::Parse` turns into rule
-  # alternatives. Twenty entries in total — which is exactly why they are
-  # generated rather than typed: grammar-shaping data comes from the oracle, and
-  # twenty hand-typed entries drift silently the first time upstream edits one.
-  #
-  # Every check below is a property the grammar depends on, so an upstream
-  # change that breaks one stops generation instead of producing a grammar that
-  # parses differently.
-  GRAMMAR_CLASS_CONSTANTS = {
-    "ternaryClasses" => :TERNARY_CLASSES,
-    "binaryClasses" => :BINARY_CLASSES,
-    "subSupClasses" => :SUB_SUP_CLASSES,
-  }.freeze
-
-  GRAMMAR_PAREN_CONSTANTS = {
-    "tableParenthesis" => :TABLE_PARENTHESIS,
-    "parenthesis" => :PARENTHESIS,
-  }.freeze
-
-  def asciimath_grammar_tables
-    constants = Plurimath::Asciimath::Constants
-    classes = GRAMMAR_CLASS_CONSTANTS.transform_values do |name|
-      grammar_class_list(name, constants.const_get(name))
-    end
-    parens = GRAMMAR_PAREN_CONSTANTS.transform_values do |name|
-      grammar_paren_pairs(name, constants.const_get(name))
-    end
-
-    assert_grammar_classes_disjoint!(classes)
-    assert_table_parens_agree!(parens)
-
-    tables = classes.merge(parens)
-    tables.merge("counts" => tables.transform_values(&:length))
-  end
-
-  # `symbol_text_or_integer` reduces the three class lists into one ordered
-  # choice (`sub_sup_classes | binary_classes | ternary_classes`,
-  # asciimath/parse.rb:81-84 — `power_base_rules` at :102 is a different set), so
-  # order inside a list is behaviour and the emitted array preserves the gem's
-  # insertion order rather than sorting it.
-  def grammar_class_list(name, list)
-    raise Error, "#{name} is #{list.class}; expected an Array" unless list.is_a?(::Array)
-    raise Error, "#{name} is empty; the grammar rule it builds would match nothing" if list.empty?
-
-    wrong = list.reject { |entry| entry.is_a?(::String) }
-    raise Error, "#{name} holds non-strings: #{wrong.inspect}" unless wrong.empty?
-
-    duplicates = list.tally.select { |_, count| count > 1 }.keys
-    unless duplicates.empty?
-      raise Error, "#{name} repeats #{duplicates.join(', ')}; an ordered choice would never reach the second one"
-    end
-
-    list.dup
-  end
-
-  # Emitted as ordered pairs, never as separate key and value lists. `open_table`
-  # reads the keys and `close_table` the values (parse.rb:47-52), but `read_text`
-  # looks the closing paren up *by* the captured opening one at parse time
-  # (parse.rb:181) — split the hash in two and that mapping is gone, and the two
-  # halves are free to drift.
   def grammar_paren_pairs(name, hash)
     raise Error, "#{name} is #{hash.class}; expected a Hash" unless hash.is_a?(::Hash)
     raise Error, "#{name} is empty; the grammar rule it builds would match nothing" if hash.empty?
@@ -1791,49 +1725,11 @@ module CorpusGenerator
     pairs
   end
 
-  def assert_grammar_classes_disjoint!(classes)
-    shared = classes.keys.combination(2).flat_map do |left, right|
-      (classes[left] & classes[right]).map { |entry| "#{entry} (#{left}, #{right})" }
-    end
-    return if shared.empty?
-
-    raise Error, <<~MESSAGE
-      The grammar class lists overlap: #{shared.join(', ')}.
-      `symbol_text_or_integer` reduces all three into one ordered choice
-      (asciimath/parse.rb:81-84), so a shared entry makes the later list unreachable.
-    MESSAGE
-  end
-
-  def assert_table_parens_agree!(parens)
-    all = parens.fetch("parenthesis").to_h
-    disagreeing = parens.fetch("tableParenthesis").reject do |open, close|
-      all.fetch(open, close) == close
-    end
-    return if disagreeing.empty?
-
-    raise Error, <<~MESSAGE
-      TABLE_PARENTHESIS and PARENTHESIS disagree on #{disagreeing.map(&:first).join(', ')}.
-      A table's parens are matched from the first table and read back through the
-      second (parse.rb:47-52 and :181), so the two must map an opening paren to
-      the same closing one.
-    MESSAGE
-  end
-
-  # --- asciimath transform class registry ----------------------------------
-
-  # The transform builds most nodes by *name*: `Utility.get_class(text)` turns
-  # matched input into a constant path at runtime. The port replaces that with
-  # an explicit registry (`src/formats/asciimath/registry.ts`, TODO.plan
-  # p1/05), whose completeness must be asserted against a generated list
-  # rather than by hand. This section measures that list: every name the
-  # transform can hand to `get_class`, plus the two Utility tables its actions
-  # read (`FONT_STYLES` and `UNARY_CLASSES`), each resolved through the gem to
-  # the class it actually names. Resolution is measured, never derived by
-  # capitalizing: `overbrace`, `underbrace` and `underline` resolve through
-  # constant aliases (`Overbrace = Obrace`, ...) to classes whose names do not
-  # match the input.
+  # The grammar is owned by amath. Only model construction still needs a
+  # local registry: measure the capture ranges in the loaded artifact and
+  # resolve their classes through the current Mapper::Rules implementation.
   TRANSFORM_SOURCE_FILES = %w[
-    lib/plurimath/asciimath/transform.rb
+    lib/plurimath/asciimath/mapper/rules.rb
     lib/plurimath/asciimath/utility.rb
   ].freeze
   AMATH_GRAMMAR_ARTIFACT = "amath artifacts/asciimath.json"
@@ -1936,14 +1832,10 @@ module CorpusGenerator
   # field holds the grammar text. Its class-list rules read
   # `binary_classes = ("underset") as binary_class / ...` (sub_sup and binary
   # share `binary_class`), and every unary literal is captured inline as
-  # `("sin") as unary_class`. The unary range is the `precompile_constants`
-  # literals of kind `:unary_class`, cross-checked against those grammar
-  # captures. A capture feeding `get_class` outside these tags has no
+  # `("sin") as unary_class`. The unary and font ranges come from the same artifact captures. A capture feeding `get_class` outside these tags has no
   # enumerable range and fails generation rather than being guessed at.
   def transform_capture_ranges(_gem_dir)
     source = amath_grammar_source
-    constants = Plurimath::Asciimath::Constants
-
     tagged = Hash.new { |hash, key| hash[key] = [] }
     source.scan(/^\s*[a-z_]+_classes\s*=\s*(.+)$/) do |(body)|
       body.scan(/\("([^"]+)"\)\s+as\s+(binary_class|ternary_class)\b/) do |name, tag|
@@ -1961,24 +1853,16 @@ module CorpusGenerator
                    "the unary range cannot be enumerated from the grammar"
     end
 
-    by_kind = constants.precompile_constants.group_by { |_, kind| kind }
-      .transform_values { |pairs| pairs.map(&:first) }
-    unary = by_kind.fetch(:unary_class) do
-      raise Error, "precompile_constants has no :unary_class literals"
-    end
-
-    unless unary.sort == grammar_unary.sort
-      raise Error, "precompile_constants :unary_class literals differ from the " \
-                   "amath grammar's unary_class captures: only in constants " \
-                   "#{(unary - grammar_unary).sort}, only in grammar " \
-                   "#{(grammar_unary - unary).sort}"
-    end
+    # Literal spellings are JSON strings in the PARG source. The vocabulary
+    # is shared across decimal markers and may be repeated inline.
+    fonts = source.scan(/\(("(?:[^"\\]|\\.)*")\)\s+as\s+fonts_class\b/)
+      .flatten.map { |literal| JSON.parse(literal) }.uniq
 
     {
-      "unary_class" => unary,
+      "unary_class" => grammar_unary,
       "binary_class" => tagged["binary_class"].uniq,
       "ternary_class" => tagged["ternary_class"].uniq,
-      "fonts" => by_kind.fetch(:fonts, []),
+      "fonts" => fonts,
     }
   end
 
@@ -2523,7 +2407,7 @@ module CorpusGenerator
   # asciimath set: every entry is measured off the runtime and re-verified by
   # a render (or the gem's own reader method) that actually uses it.
 
-  MATHML_SPACING_PREFIX = "<mrow>\n      <mo rspace=\"thickmathspace\"/>"
+  MATHML_SPACING_PREFIX = '<mo rspace="0.2778em"/>'
 
   def mathml_probe_formula(node)
     Plurimath::Math::Formula.new([node])
@@ -2650,12 +2534,12 @@ module CorpusGenerator
 
   def mathml_mathvariant_of(node)
     element = node.to_mathml_without_math_tag(false, options: {})
-    unless element.respond_to?(:name) && element.name == "mstyle"
-      raise Error, "font-style render produced #{element.inspect}, not an <mstyle>"
+    unless element.respond_to?(:name) && element.name == "mrow"
+      raise Error, "font-style render produced #{element.inspect}, not an <mrow>"
     end
 
     variant = element.attributes["mathvariant"]
-    raise Error, "font-style <mstyle> carries no mathvariant" if variant.nil?
+    raise Error, "font-style <mrow> carries no mathvariant" if variant.nil?
 
     variant.to_s
   end
@@ -4697,13 +4581,11 @@ module CorpusGenerator
   end
 
   def emit_input_file(out_root, tables)
-    kinds = tables["literal_kinds"].map { |kind| ts_string(kind) }.join(" | ")
     sections = [
       ts_header(<<~TEXT.chomp),
         AsciiMath parser input tables.
 
-        Input text -> symbol id, plus the ordered literal list the grammar
-        dispatches on. Both are longest-first, matching the gem's precompile
+        Input text -> symbol id, longest-first, matching the gem's precompile
         ordering; equal-length entries are ordered by text, which is inert
         (two equal-length literals cannot both match at one position) and makes
         the output reproducible where the gem's unstable sort does not.
@@ -4729,79 +4611,9 @@ module CorpusGenerator
         doc: "Inputs both source tables claim, as [input, symbol id, paren id].\n" \
              "The paren id wins in `ASCIIMATH_SYMBOL_INPUT`, as in the gem.",
       ),
-      ts_const(
-        "ASCIIMATH_SKIP_INPUT_PARENS",
-        "readonly string[]",
-        tables["skip_input_parens"],
-        doc: "Parens the grammar matches structurally, so they are kept out of\nthe literal list.",
-      ),
-      "export type AsciimathLiteralKind = #{kinds};",
-      ts_tuple_map(
-        "ASCIIMATH_LITERALS",
-        "ReadonlyMap<string, AsciimathLiteralKind>",
-        tables["literals"],
-        doc: "The ordered literal list, longest first: iteration order is the\n" \
-             "grammar's ordered choice, from `Asciimath::Constants.precompile_constants`.",
-      ),
     ]
 
     write_ts(File.join(out_root, INPUT_FORMAT, "input.ts"), sections)
-  end
-
-  def emit_grammar_file(out_root, tables)
-    sections = [
-      ts_header(<<~TEXT.chomp),
-        AsciiMath grammar tables: the alternatives `Asciimath::Parse` builds its
-        rules from, consumed by `src/formats/asciimath/grammar.ts`.
-
-        Order is behaviour. Parslet's `|` is an ordered choice and
-        `symbol_text_or_integer` reduces the three class lists into one of them
-        (`asciimath/parse.rb:81-84`), so these arrays keep the gem's insertion
-        order — they are never sorted, even where today's entries could not
-        overlap.
-      TEXT
-      ts_const(
-        "ASCIIMATH_TERNARY_CLASSES",
-        "readonly string[]",
-        tables.fetch("ternaryClasses"),
-        doc: "`ternary_classes`: a function taking a base, a power and an\noptional third value.",
-      ),
-      ts_const(
-        "ASCIIMATH_BINARY_CLASSES",
-        "readonly string[]",
-        tables.fetch("binaryClasses"),
-        doc: "`binary_classes`: a function taking a base value and a power value.",
-      ),
-      ts_const(
-        "ASCIIMATH_SUB_SUP_CLASSES",
-        "readonly string[]",
-        tables.fetch("subSupClasses"),
-        doc: "`sub_sup_classes`: tagged `:binary_class` like the list above, but\n" \
-             "tried first and followed by a single `power_base`.",
-      ),
-      [
-        ts_doc("An opening paren and the closing one that matches it. The two are\n" \
-               "kept paired because the grammar resolves one from the other at\n" \
-               "parse time (`read_text`, `asciimath/parse.rb:181`)."),
-        "export type AsciimathParenPair = readonly [open: string, close: string];",
-      ].join("\n"),
-      ts_tuple_list(
-        "ASCIIMATH_TABLE_PARENTHESIS",
-        "readonly AsciimathParenPair[]",
-        tables.fetch("tableParenthesis"),
-        doc: "`open_table` matches the opening parens, `close_table` the closing\n" \
-             "ones. `ᑕ ᑐ ℒ ℛ` are the preprocessing substitutions for `(: :) {: :}`.",
-      ),
-      ts_tuple_list(
-        "ASCIIMATH_PARENTHESIS",
-        "readonly AsciimathParenPair[]",
-        tables.fetch("parenthesis"),
-        doc: "`lparen` matches the opening parens and `rparen` the closing ones;\n" \
-             "`read_text` reads the closing one back from the captured opening one.",
-      ),
-    ]
-
-    write_ts(File.join(out_root, INPUT_FORMAT, "grammar.ts"), sections)
   end
 
   def emit_transform_registry_file(out_root, registry)
@@ -4814,7 +4626,7 @@ module CorpusGenerator
         rather than by hand.
 
         The reachable set is measured, never inferred: every `get_class`
-        argument in `asciimath/transform.rb` and `asciimath/utility.rb`
+        argument in `asciimath/mapper/rules.rb` and `asciimath/utility.rb`
         (a captured identifier is enumerated through its grammar token range),
         plus the two Utility tables the actions read. Resolution goes through
         the gem because it is not mechanical capitalization: `overbrace`,
@@ -5627,7 +5439,6 @@ module CorpusGenerator
       "omml_tag_names" => omml_symbol_tag_names(static),
       "html_fenced_parens" => html_fenced_paren_payloads(static),
       "tables" => asciimath_input_tables(classes),
-      "grammar" => asciimath_grammar_tables,
     }
   end
 
@@ -5660,7 +5471,6 @@ module CorpusGenerator
                         omml_render_tables, provenance)
     written = [
       File.join(out_root, INPUT_FORMAT, "input.ts"),
-      File.join(out_root, INPUT_FORMAT, "grammar.ts"),
       File.join(out_root, INPUT_FORMAT, "transform-registry.ts"),
       File.join(out_root, INPUT_FORMAT, "render-tables.ts"),
       File.join(out_root, "mathml", "render-tables.ts"),
@@ -5669,7 +5479,6 @@ module CorpusGenerator
       File.join(out_root, "omml", "render-tables.ts"),
     ]
     emit_input_file(out_root, data["tables"])
-    emit_grammar_file(out_root, data["grammar"])
     emit_transform_registry_file(out_root, registry)
     emit_render_tables_file(out_root, render_tables)
     emit_mathml_render_tables_file(out_root, mathml_tables)
@@ -5856,6 +5665,7 @@ module CorpusGenerator
       "generator" => {
         "path" => GENERATOR_PATH,
         "sha256" => sha256(File.binread(File.join(REPO_ROOT, GENERATOR_PATH))),
+        "inputs" => { "scripts/oracle-model-fields.rb" => sha256(File.binread(File.join(REPO_ROOT, "scripts/oracle-model-fields.rb"))) },
         "repository" => checkout_provenance(REPO_ROOT, dirty["generator"]),
       },
       "oracle" => {
@@ -5976,8 +5786,7 @@ module CorpusGenerator
          "#{exclusions.length} withheld, #{census['summary']['total']} classes censused"
     probe = symbols["probe"]
     puts "#{symbols['static'].length} symbols across #{SYMBOL_FORMATS.join(', ')}; " \
-         "#{symbols['tables']['counts']['merged']} inputs, " \
-         "#{symbols['tables']['counts']['literals']} literals"
+         "#{symbols['tables']['counts']['merged']} inputs"
     tag_names = symbols["omml_tag_names"]
     puts "omml_tag_name: default #{tag_names['default']}, " \
          "#{tag_names['overrides'].length} override(s) — " \
@@ -5985,8 +5794,6 @@ module CorpusGenerator
     fenced_parens = symbols["html_fenced_parens"]
     puts "html fenced paren payloads: #{fenced_parens['entries'].length} Paren subclass(es), " \
          "#{fenced_parens['divergent']} differing from Paren#to_html"
-    puts "grammar tables: " \
-         "#{symbols['grammar']['counts'].map { |name, count| "#{name} #{count}" }.join(', ')}"
     puts "transform registry: " \
          "#{registry['counts'].map { |name, count| "#{name} #{count}" }.join(', ')}"
     puts "render tables: " \

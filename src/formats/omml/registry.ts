@@ -11,6 +11,7 @@
 
 import {
   AbsNode,
+  AnnotationNode,
   BarNode,
   BaseNode,
   BinaryFunctionNode,
@@ -61,6 +62,7 @@ export type OmmlNodeConstructor = new (
 ) => MathNode;
 
 export const OMML_NODE_CONSTRUCTORS: { readonly [K in NodeKind]: OmmlNodeConstructor } = {
+  annotation: AnnotationNode,
   abs: AbsNode,
   bar: BarNode,
   base: BaseNode,

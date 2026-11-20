@@ -27,6 +27,7 @@ export {
  */
 export type {
   AbsInit,
+  AnnotationInit,
   BarInit,
   BaseInit,
   BinaryFunctionInit,
@@ -78,6 +79,7 @@ export type {
 } from "./nodes";
 export {
   AbsNode,
+  AnnotationNode,
   BarNode,
   BaseNode,
   BinaryFunctionNode,
@@ -111,6 +113,7 @@ export {
   TableNode,
   TernaryFunctionNode,
   TextNode,
+  THICK_RSPACE,
   TildeNode,
   UbraceNode,
   UlNode,

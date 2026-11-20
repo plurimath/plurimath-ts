@@ -146,7 +146,7 @@ export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
       const [text] = at(s, v, ["string"]);
       // Ruby eagerly validates in its constructor. Core stays format-blind,
       // so this adapter exercises the equivalent native leaf parse boundary.
-      validateUnitsml(text as string);
+      if (text !== null && text !== undefined && text !== false) validateUnitsml(text as string);
       return new C.UnitsmlNode({ text } as never);
     },
   },

@@ -18,7 +18,7 @@
  * `basePrefix` or `basePostfix`, which renders as literal text. Otherwise the
  * number has a semantic base (a base other than 10, neither affix given), each
  * target draws it its own way, and `expected` holds the five answers, with
- * `mathml` the inside of `<mstyle displaystyle="true">`, whitespace between
+ * `mathml` the inside of `<math displaystyle="true">`, whitespace between
  * tags removed. Many values and options come from the gem's own
  * `spec/plurimath/number_formatter_spec.rb` ("testing base conversion
  * arguments"), rerun through `Formatter::Standard` — the class the `formatter:`

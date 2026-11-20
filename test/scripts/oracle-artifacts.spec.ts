@@ -87,3 +87,32 @@ describe("format lookup artifact replay", () => {
     expect(recorded.roots).toContain("src/formats/mathml/generated-recognition");
   });
 });
+
+describe("evaluation artifact ownership", () => {
+  it("generates the active profile and leaves the historical reference out of exports", () => {
+    const result = runRuby(`
+      require_relative "scripts/ci/oracle-artifacts"
+      runner = OracleArtifacts::Runner.allocate
+      runner.instance_variable_set(:@source, Dir.pwd)
+      runner.instance_variable_set(:@oracle, "/oracle")
+      job = runner.inventory("/output").find { |name, _, _| name == "evaluation-fixtures" }
+      puts JSON.generate({ job: job, paths: runner.expected_paths })
+    `);
+    expect(result.status, result.stdout).toBe(0);
+    const data = JSON.parse(result.stdout.trim()) as {
+      job: [string, string, string[]];
+      paths: string[];
+    };
+    expect(data.job[2]).toEqual([
+      "--oracle",
+      "/oracle",
+      "--out",
+      "/output/test/formats/evaluation/ruby-8916961-v1",
+    ]);
+    expect(data.paths).toContain(
+      "test/formats/evaluation/ruby-8916961-v1/evaluation-fixtures.json",
+    );
+    expect(data.paths).not.toContain("test/formats/evaluation/evaluation-fixtures.json");
+    expect(data.paths).not.toContain("test/formats/evaluation/evaluation-fixtures.manifest.yaml");
+  });
+});

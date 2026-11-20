@@ -41,10 +41,10 @@ function compact(mathml: string): string {
   return mathml.replace(/>\s+</g, "><");
 }
 
-/** The inside of `<mstyle displaystyle="true">`, as the cases file records it. */
+/** The inside of `<math displaystyle="true">`, as the cases file records it. */
 function mathmlInside(mathml: string): string {
-  const match = /<mstyle displaystyle="true">(.*)<\/mstyle>/s.exec(compact(mathml));
-  if (match === null) throw new Error(`no mstyle in ${mathml}`);
+  const match = /<math[^>]* displaystyle="true">(.*)<\/math>/s.exec(compact(mathml));
+  if (match === null) throw new Error(`no displaystyle math in ${mathml}`);
   return match[1] as string;
 }
 

@@ -57,7 +57,7 @@ import {
   type UnitsmlRenderOptions,
 } from "./render-shared";
 
-const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
+const RENDERERS: { readonly [K in Exclude<NodeKind, "annotation">]: RenderFn<K> } = {
   abs: renderAbs,
   bar: renderBar,
   base: renderBase,
@@ -107,6 +107,10 @@ const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
  */
 function renderNode(node: MathNode, context: RenderContext): MathmlRendered {
   const kind = node.kind;
+  // Annotation is a mapping node; Ruby has no standalone renderer for it.
+  if (kind === "annotation") {
+    throw new RenderError("Annotation is a mapping node with no Ruby renderer", "mathml", kind);
+  }
   if (!Object.hasOwn(RENDERERS, kind)) {
     throw new RenderError(`Unknown node kind "${kind}"`, FORMAT, kind);
   }

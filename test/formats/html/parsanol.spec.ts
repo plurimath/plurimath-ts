@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -100,7 +101,13 @@ it("binds the independent source profile to its measured inputs and producer", (
   expect(source.source_commit).toBe("0a1df68a5903d43da13b1e1ef85b6c0523feb1b4");
   const provenance = source.provenance;
   expect(sha(provenance.generator)).toBe(provenance.generator_sha256);
-  expect(sha(provenance.serializer)).toBe(provenance.serializer_sha256);
+  // The profile was introduced at this commit with these serializer bytes.
+  // Later serializer changes belong to the current profiles, not this recording.
+  const producer = "8d0d620ab4b76d2258b6879971a9c1cbcb375329";
+  const serializer = execFileSync("git", ["show", `${producer}:${provenance.serializer}`], {
+    cwd: root,
+  });
+  expect(createHash("sha256").update(serializer).digest("hex")).toBe(provenance.serializer_sha256);
   expect(sha(provenance.inputs)).toBe(provenance.inputs_sha256);
   const inputs = JSON.parse(readFileSync(resolve(root, provenance.inputs), "utf8")) as {
     cases: { id: string; input: string }[];

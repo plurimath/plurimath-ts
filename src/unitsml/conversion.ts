@@ -233,7 +233,7 @@ function mathml(expression: Expression, options: EffectiveUnitsmlOptions): strin
           : typeof value === "string"
             ? mathmlToken(value)
             : failure("UnitsML cannot encode this multiplier Symbol as MathML");
-      return `<mo${sentinel === "space" ? ' rspace="thickmathspace"' : ""}>${token}</mo>`;
+      return `<mo${sentinel === "space" ? ` rspace="thickmathspace"` : ""}>${token}</mo>`;
     }
     case "prefix":
       return body(output(record(expression), "mathml"));

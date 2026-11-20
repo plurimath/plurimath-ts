@@ -35,6 +35,7 @@ import { parseUnicodemathTree } from "../../../src/formats/unicodemath/parser";
 import { buildUnicodemathTransform, shapeOf } from "../../../src/formats/unicodemath/transform";
 import { Slice, sequence, simple, Transform } from "../../../src/pegkit/index";
 import { asMapping, asString, loadStageGeneration, pinPath } from "../../replay/stage-pin";
+import { currentSourceProfile } from "./current-profile";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -115,7 +116,14 @@ for (const payload of loadStageGeneration(pinPath("roundtrip")).payloads) {
   }
 }
 
-const FINAL_COUNT = 489;
+// Current source profile: quoted text followed by an expression in a naryand.
+const textFence = [...currentSourceProfile("xml-origin").values()].filter((row) =>
+  row.input.includes('▒〖"P"'),
+);
+if (textFence.length !== 1) throw new Error("Missing current text/exp fence witness");
+for (const row of textFence) build.transform.apply(parseUnicodemathTree(row.input));
+
+const FINAL_COUNT = 490;
 
 describe("transform rule coverage", () => {
   it("drove every parseable fixture through one transform", () => {

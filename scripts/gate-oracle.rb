@@ -302,6 +302,13 @@ module OracleGate
   # through $LOAD_PATH themselves instead of running under its Bundler alone.
   FORMAT_FIXTURE_GENERATORS = [
     {
+      basename: "current-profiles.json",
+      script: { "unicodemath" => "generate-unicodemath-current-profiles.rb" }.freeze,
+      arguments: lambda do |format, regenerated_root|
+        ["--out", File.join(regenerated_root, "test", "formats", format)]
+      end,
+    },
+    {
       basename: "parity-fixtures.json",
       script: "generate-parity-fixtures.rb",
       # `--out` is the format ROOT; the script appends <format>/parity-fixtures.json.

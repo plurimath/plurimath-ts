@@ -110,6 +110,20 @@ const SHA256 = /^[0-9a-f]{64}$/;
 const COMMIT = /^[0-9a-f]{40}$/;
 const IMMUTABLE_REVISION = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
 const FIXTURE_SPECS = {
+  "current-profiles.json": {
+    generator: "scripts/generate-unicodemath-current-profiles.rb",
+    schema: "plurimath-unicodemath-current-profiles/1",
+    rows: "groups",
+    shape: "unicode-current-profiles",
+    usesCorpus: false,
+    usesRenderInventory: false,
+    additionalInputs: [
+      "scripts/generate-unitsml-data.rb",
+      "test/formats/unicodemath/reachability-fixtures.json",
+      "test/formats/unicodemath/scope-gap-fixtures.json",
+      "test/formats/unicodemath/xml-origin-fixtures.json",
+    ],
+  },
   "completion-fixtures.json": {
     generator: "scripts/generate-unitsml-data.rb",
     schema: "plurimath-unicode-probe/1",
@@ -327,6 +341,7 @@ function specFor(relative: string): FixtureSpec {
 }
 
 const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
+  | "current-profiles.json"
   | "completion-fixtures.json"
   | "probe-fixtures.json"
   | "degenerate-fixtures.json"
@@ -653,6 +668,14 @@ function fixtureInputPath(payload: string, input: string): string {
     : input;
 }
 
+function fixtureInputSha256(payload: string, input: string): string {
+  if (payload === ARCHIVED_EVALUATION) {
+    const original = input === ARCHIVED_EVALUATION_GENERATOR ? EVALUATION_GENERATOR : input;
+    return gitFileSha256AtCommit("16c28cb992afd790c398344ac1fe7b4bc087e60a", original);
+  }
+  return sha256OfFile(input);
+}
+
 const ALL_FORMAT_JSON_PAYLOADS = filesUnder(FORMATS_ROOT, (name) => name.endsWith(".json"));
 const FORMAT_FIXTURE_PAYLOADS = ALL_FORMAT_JSON_PAYLOADS.filter((path) =>
   FIXTURE_BASENAMES.some((name) => name === basename(path)),
@@ -932,7 +955,8 @@ function expectEvaluationSourceCandidate(manifest: Mapping, at: string): void {
 function expectSidecarEnvelope(record: FixtureRecord): void {
   const at = record.manifestRelative;
   const manifest = record.manifest;
-  const isSourceCandidate = record.relative === CURRENT_EVALUATION;
+  const isSourceCandidate =
+    record.relative === CURRENT_EVALUATION && "source_candidate" in manifest;
   expectExactKeys(
     manifest,
     [
@@ -975,6 +999,7 @@ function expectSidecarEnvelope(record: FixtureRecord): void {
   expect(Object.keys(inputs).sort()).toStrictEqual(
     [
       "scripts/generate-corpus.rb",
+      ...(record.relative === ARCHIVED_EVALUATION ? [] : ["scripts/oracle-model-fields.rb"]),
       "scripts/render-fixture-provenance.rb",
       record.spec.generator,
       ...(record.spec.additionalInputs ?? []),
@@ -990,7 +1015,7 @@ function expectSidecarEnvelope(record: FixtureRecord): void {
   for (const [path, hash] of Object.entries(inputs)) {
     expect(hash, `${at}.generator.inputs.${path}`).toMatch(SHA256);
     expect(
-      sha256OfFile(fixtureInputPath(record.relative, path)),
+      fixtureInputSha256(record.relative, fixtureInputPath(record.relative, path)),
       `${at}.generator.inputs.${path}`,
     ).toBe(hash);
   }
@@ -1036,9 +1061,11 @@ function expectSidecarEnvelope(record: FixtureRecord): void {
   expectOracleShape(
     manifest,
     at,
-    isSourceCandidate
-      ? { oracleVersion: "0.11.17", oracleCommit: "8916961a69dc1f586e915790c4fb052b910efa86" }
-      : undefined,
+    record.relative === ARCHIVED_EVALUATION
+      ? { oracleVersion: "0.11.17", oracleCommit: "2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256" }
+      : isSourceCandidate
+        ? { oracleVersion: "0.11.17", oracleCommit: "8916961a69dc1f586e915790c4fb052b910efa86" }
+        : undefined,
   );
   if (isSourceCandidate) expectEvaluationSourceCandidate(manifest, at);
 
@@ -1300,6 +1327,65 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
     (_label, record) => {
       expectSidecarEnvelope(record);
       expect(stringField(record.payload, "schema", record.relative)).toBe(record.spec.schema);
+      if (record.spec.shape === "unicode-current-profiles") {
+        const { payload, relative: at } = record;
+        expectExactKeys(
+          payload,
+          ["schema", "oracle", "lockSha256", "historicalInputs", "groups"],
+          at,
+        );
+        expect(stringField(payload, "oracle", at)).toBe(
+          stringField(mapField(record.manifest, "oracle", at), "commit", at),
+        );
+        const dependencies = mapField(record.manifest, "dependencies", at);
+        expect(stringField(payload, "lockSha256", at)).toBe(
+          stringField(mapField(dependencies, "lockfile", at), "sha256", at),
+        );
+        const groups = mapField(payload, "groups", at);
+        const historicalInputs = mapField(payload, "historicalInputs", at);
+        const names = ["reachability", "scope-gap", "xml-origin"];
+        expectExactKeys(groups, names, `${at}.groups`);
+        expectExactKeys(
+          historicalInputs,
+          names.map((name) => `test/formats/unicodemath/${name}-fixtures.json`),
+          `${at}.historicalInputs`,
+        );
+        for (const name of names) {
+          const path = `test/formats/unicodemath/${name}-fixtures.json`;
+          expect(stringField(historicalInputs, path, at)).toBe(sha256OfFile(path));
+          const historical = mapping(JSON.parse(readFileSync(join(REPO_ROOT, path), "utf8")), path);
+          const rows = arrayField(groups, name, at).map((row, index) =>
+            mapping(row, `${at}.groups.${name}[${index}]`),
+          );
+          expect(rows.length).toBeGreaterThan(0);
+          const inputs = rows.map((row) => stringValue(row, "input", at));
+          expect(inputs).toStrictEqual(
+            arrayField(historical, "cases", path).map((row) =>
+              stringValue(mapping(row, path), "input", path),
+            ),
+          );
+          expect(new Set(inputs).size).toBe(rows.length);
+          for (const row of rows) {
+            if (row.raises !== undefined) {
+              expectExactKeys(row, ["input", "raises"], at);
+              expect(stringField(row, "raises", at)).toBe("Plurimath::Math::ParseError");
+            } else {
+              mapping(row.model, `${at}.model`);
+              const formats =
+                name === "scope-gap"
+                  ? ["asciimath", "latex", "mathml", "html", "omml", "unicodemath"]
+                  : [];
+              const keys = formats.map((format) => {
+                const key = format in row ? format : `${format}Error`;
+                stringValue(row, key, at);
+                return key;
+              });
+              expectExactKeys(row, ["input", "model", ...keys], at);
+            }
+          }
+        }
+        return;
+      }
       if (record.spec.shape === "unicode-probe" || record.spec.shape === "unitsml-probe") {
         expectNativeProbe(record);
         return;
@@ -2189,8 +2275,8 @@ describe("generated data binds to the generator inputs it names", () => {
 
   it.each(RECORDED.map((entry) => [`${entry[0]} -> ${entry[1]}`, entry] as const))(
     "%s",
-    (_label, [, file, recorded]) => {
-      expect(sha256OfFile(file)).toBe(recorded);
+    (_label, [payload, file, recorded]) => {
+      expect(fixtureInputSha256(payload, file)).toBe(recorded);
     },
   );
 
@@ -2328,11 +2414,16 @@ describe("top-level corpus manifests carry the manifest/2 shape", () => {
       expect(arrayField(manifest, "warnings", at)).toStrictEqual([]);
 
       const generator = mapField(manifest, "generator", at);
-      expectExactKeys(generator, ["path", "sha256", "repository"], `${at}.generator`);
+      expectExactKeys(generator, ["path", "sha256", "repository", "inputs"], `${at}.generator`);
       expect(stringField(generator, "path", `${at}.generator`)).toBe("scripts/generate-corpus.rb");
       const generatorSha256 = stringField(generator, "sha256", `${at}.generator`);
       expect(generatorSha256).toMatch(SHA256);
       expect(sha256OfFile("scripts/generate-corpus.rb")).toBe(generatorSha256);
+      const helperInputs = mapField(generator, "inputs", `${at}.generator`);
+      expectExactKeys(helperInputs, ["scripts/oracle-model-fields.rb"], `${at}.generator.inputs`);
+      expect(stringField(helperInputs, "scripts/oracle-model-fields.rb", at)).toBe(
+        sha256OfFile("scripts/oracle-model-fields.rb"),
+      );
       const generatorRepository = mapField(generator, "repository", `${at}.generator`);
       expectExactKeys(
         generatorRepository,

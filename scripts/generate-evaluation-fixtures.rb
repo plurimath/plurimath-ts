@@ -68,10 +68,10 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-evaluation-fixtures.rb"
 SCHEMA = "plurimath-corpus/evaluation/1"
 PAYLOAD_BASENAME = "evaluation-fixtures.json"
 
-options = { oracle: nil, out: "test/formats/evaluation", allow_dirty: false, source_candidate: false }
+options = { oracle: nil, out: "test/formats/evaluation/ruby-8916961-v1", allow_dirty: false, source_candidate: false }
 OptionParser.new do |o|
   o.on("--oracle PATH", "clean pinned plurimath checkout") { |v| options[:oracle] = v }
-  o.on("--out PATH", "output directory (default test/formats/evaluation)") do |v|
+  o.on("--out PATH", "output directory (default test/formats/evaluation/ruby-8916961-v1)") do |v|
     options[:out] = v
     options[:explicit_out] = true
   end

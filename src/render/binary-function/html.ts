@@ -56,7 +56,14 @@ export function renderBinaryFunction(
     // `power.rb:41-45`.
     case "Power":
       return (
-        renderCarrierSlot(parameterOne, context, "power.parameterOne") +
+        (parameterOne !== null &&
+        typeof parameterOne === "object" &&
+        "kind" in parameterOne &&
+        parameterOne.kind === "fontStyle" &&
+        "name" in parameterOne &&
+        parameterOne.name === "Normal"
+          ? renderChild(parameterOne, context, "power.parameterOne")
+          : renderCarrierSlot(parameterOne, context, "power.parameterOne")) +
         renderTaggedSlot("sup", parameterTwo, context, "power.parameterTwo")
       );
 

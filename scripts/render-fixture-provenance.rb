@@ -104,7 +104,7 @@ module RenderFixtureProvenance
   end
 
   def generator_inputs(generator_path)
-    [CorpusGenerator::GENERATOR_PATH, SUPPORT_PATH, generator_path].uniq.sort.to_h do |path|
+    [CorpusGenerator::GENERATOR_PATH, "scripts/oracle-model-fields.rb", SUPPORT_PATH, generator_path].uniq.sort.to_h do |path|
       absolute = File.join(CorpusGenerator::REPO_ROOT, path)
       raise CorpusGenerator::Error, "generator input #{path} is missing" unless File.file?(absolute)
 

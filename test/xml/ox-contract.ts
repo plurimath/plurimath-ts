@@ -159,20 +159,20 @@ function textEl(name: string, text: string): XmlElement {
   return el(name).append(text);
 }
 
-/** The `math > mstyle > …` shell every `to_mathml` result has (formula.rb:96-105). */
+/** The MathML 4 shell emitted by `to_mathml`, with displaystyle on the root. */
 function mathStyleTree(content: readonly XmlAppendable[]): XmlElement {
-  const math = el("math").setAttributes({
-    xmlns: "http://www.w3.org/1998/Math/MathML",
-    display: "block",
-  });
-  const style = el("mstyle").setAttribute("displaystyle", "true");
-  style.append(content);
-  math.append(style);
-  return math;
+  return el("math")
+    .setAttribute("xmlns", "http://www.w3.org/1998/Math/MathML")
+    .setAttribute("display", "block")
+    .setAttribute("displaystyle", "true")
+    .append(content);
 }
 
 function nestedTree(): XmlElement {
-  return mathStyleTree([textEl("mi", "x")]);
+  return el("math")
+    .setAttribute("xmlns", "http://www.w3.org/1998/Math/MathML")
+    .setAttribute("display", "block")
+    .append(el("mstyle").setAttribute("displaystyle", "true").append(textEl("mi", "x")));
 }
 
 function deepTree(): XmlElement {

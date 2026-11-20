@@ -48,7 +48,7 @@ describe("the gem-verified latex render sweep", () => {
   it("is complete and non-empty (an empty sweep is a failure, not a pass)", () => {
     expect(fixture.cases.length).toBe(1642);
     expect(fixture.cases.length).toBe(fixture.count);
-    expect(fixture.oracle.commit).toBe("2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256");
+    expect(fixture.oracle.commit).toBe("1a3033d0881d6c6ba655ab3ce00e0dc3cccfe5b4");
     for (const entry of fixture.cases) {
       // Exactly one of: a recorded render, or a recorded refusal.
       expect(typeof entry.input, JSON.stringify(entry)).toBe("string");

@@ -28,6 +28,7 @@ policy:
   - Math::Formula
   - Math::Function::BinaryFunction
   - Math::Function::Nary
+  - Math::Function::Semantics::Annotation
   - Math::Function::Table
   - Math::Function::TernaryFunction
   - Math::Function::Uncertainty
@@ -42,12 +43,12 @@ policy:
   - Math::Symbols::Paren
   deferred: []
 summary:
-  total: 1592
-  implemented: 40
+  total: 1593
+  implemented: 41
   aliased: 1552
   deferred: 0
   abstract: 4
-  concrete: 1588
+  concrete: 1589
 equality_definitions:
   Math::Formula:
     class: Math::Formula
@@ -264,6 +265,21 @@ equality_definitions:
     - parameter_one
     - parameter_three
     - parameter_two
+  Math::Function::Semantics::Annotation:
+    class: Math::Function::Semantics::Annotation
+    compares_class: false
+    calls_super: false
+    own_fields:
+    - content
+    - tag
+    normalized_by: {}
+    source: |-
+      def ==(other)
+        other.is_a?(Annotation) && other.tag == tag && other.content == content
+      end
+    fields:
+    - content
+    - tag
   Math::Function::Sum:
     class: Math::Function::Sum
     compares_class: false
@@ -360,6 +376,7 @@ equality_definitions:
     - category
     - coverage_factor
     - coverage_probability
+    - distribution
     - interval_kind
     - lower
     - magnitude
@@ -380,12 +397,14 @@ equality_definitions:
           other.upper == upper &&
           other.interval_kind == interval_kind &&
           other.notation == notation &&
-          other.unit == unit
+          other.unit == unit &&
+          other.distribution == distribution
       end
     fields:
     - category
     - coverage_factor
     - coverage_probability
+    - distribution
     - interval_kind
     - lower
     - magnitude
@@ -890,7 +909,7 @@ classes:
   direct_subclasses: 0
   aliases: Math::Function::FontStyle
   defaults:
-    required_arguments: 1
+    required_arguments: 0
     assigned:
       parameter_one:
       parameter_two: bold
@@ -927,7 +946,7 @@ classes:
   direct_subclasses: 0
   aliases: Math::Function::FontStyle
   defaults:
-    required_arguments: 1
+    required_arguments: 0
     assigned:
       parameter_one:
       parameter_two: double-struck
@@ -940,7 +959,7 @@ classes:
   direct_subclasses: 0
   aliases: Math::Function::FontStyle
   defaults:
-    required_arguments: 1
+    required_arguments: 0
     assigned:
       parameter_one:
       parameter_two: fraktur
@@ -953,7 +972,7 @@ classes:
   direct_subclasses: 0
   aliases: Math::Function::FontStyle
   defaults:
-    required_arguments: 1
+    required_arguments: 0
     assigned:
       parameter_one:
       parameter_two: italic
@@ -966,7 +985,7 @@ classes:
   direct_subclasses: 0
   aliases: Math::Function::FontStyle
   defaults:
-    required_arguments: 1
+    required_arguments: 0
     assigned:
       parameter_one:
       parameter_two: monospace
@@ -979,7 +998,7 @@ classes:
   direct_subclasses: 0
   aliases: Math::Function::FontStyle
   defaults:
-    required_arguments: 1
+    required_arguments: 0
     assigned:
       parameter_one:
       parameter_two: rm
@@ -992,7 +1011,7 @@ classes:
   direct_subclasses: 0
   aliases: Math::Function::FontStyle
   defaults:
-    required_arguments: 1
+    required_arguments: 0
     assigned:
       parameter_one:
       parameter_two: sans-serif
@@ -1017,7 +1036,7 @@ classes:
   direct_subclasses: 0
   aliases: Math::Function::FontStyle
   defaults:
-    required_arguments: 1
+    required_arguments: 0
     assigned:
       parameter_one:
       parameter_two: script
@@ -1590,6 +1609,28 @@ classes:
   abstract: false
   direct_subclasses: 0
   aliases: Math::Function::BinaryFunction
+- name: Math::Function::Semantics::Annotation
+  parent: Math::Core
+  disposition: implemented
+  abstract: false
+  direct_subclasses: 0
+  fields:
+  - content
+  - tag
+  own_fields:
+  - content
+  - tag
+  equality:
+    defined_by: Math::Function::Semantics::Annotation
+    fields:
+    - content
+    - tag
+  defaults:
+    required_arguments: 0
+    assigned: {}
+    unassigned:
+    - content
+    - tag
 - name: Math::Function::Sin
   parent: Math::Function::UnaryFunction
   disposition: aliased
@@ -1708,7 +1749,7 @@ classes:
   direct_subclasses: 0
   aliases: Math::Function::Table
   defaults:
-    required_arguments: 1
+    required_arguments: 0
     assigned:
       close_paren:
         class: Math::Symbols::Paren::Rsquare
@@ -1748,7 +1789,7 @@ classes:
   direct_subclasses: 0
   aliases: Math::Function::Table
   defaults:
-    required_arguments: 1
+    required_arguments: 0
     assigned:
       close_paren:
         class: Math::Symbols::Paren::Rsquare
@@ -1828,7 +1869,7 @@ classes:
   direct_subclasses: 0
   aliases: Math::Function::Table
   defaults:
-    required_arguments: 1
+    required_arguments: 0
     assigned:
       close_paren:
         class: Math::Symbols::Paren::Rsquare
@@ -1848,7 +1889,7 @@ classes:
   direct_subclasses: 0
   aliases: Math::Function::Table
   defaults:
-    required_arguments: 1
+    required_arguments: 0
     assigned:
       close_paren:
         class: Math::Symbols::Paren::Rround
@@ -1868,7 +1909,7 @@ classes:
   direct_subclasses: 0
   aliases: Math::Function::Table
   defaults:
-    required_arguments: 1
+    required_arguments: 0
     assigned:
       close_paren:
         class: Math::Symbols::Paren::Rsquare
@@ -1888,7 +1929,7 @@ classes:
   direct_subclasses: 0
   aliases: Math::Function::Table
   defaults:
-    required_arguments: 1
+    required_arguments: 0
     assigned:
       close_paren:
         class: Math::Symbols::Paren::Vert
@@ -2085,6 +2126,7 @@ classes:
   - category
   - coverage_factor
   - coverage_probability
+  - distribution
   - interval_kind
   - lower
   - magnitude
@@ -2096,6 +2138,7 @@ classes:
   - category
   - coverage_factor
   - coverage_probability
+  - distribution
   - interval_kind
   - lower
   - magnitude
@@ -2109,6 +2152,7 @@ classes:
     - category
     - coverage_factor
     - coverage_probability
+    - distribution
     - interval_kind
     - lower
     - magnitude
@@ -2117,10 +2161,11 @@ classes:
     - upper
     - value
   defaults:
-    required_arguments: 1
+    required_arguments: 0
     assigned:
       coverage_factor:
       coverage_probability:
+      distribution:
       interval_kind:
       lower:
       notation: absolute
@@ -2171,18 +2216,21 @@ classes:
   abstract: false
   direct_subclasses: 0
   fields:
+  - input_string
   - text
   own_fields:
+  - input_string
   - text
   equality:
     defined_by: Math::Function::Unitsml
     fields:
     - text
   defaults:
-    required_arguments: 1
+    required_arguments: 0
     assigned:
       text: kg
-    unassigned: []
+    unassigned:
+    - input_string
     constructor_arguments:
     - kg
 - name: Math::Function::Vec

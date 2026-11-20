@@ -458,7 +458,9 @@ module CoreDataGenerator
     gem_spec = Gem.loaded_specs.fetch("plurimath")
     {
       "generator" => generator_path,
-      "generatorInputs" => generator_inputs,
+      "generatorInputs" => generator_inputs.merge(
+        "scripts/oracle-model-fields.rb" => CorpusGenerator.sha256(File.binread(File.join(REPO_ROOT, "scripts/oracle-model-fields.rb"))),
+      ),
       "oracle" => "plurimath",
       "oracleVersion" => gem_spec.version.to_s,
       "oracleCommit" => CorpusGenerator.git(gem_dir, "rev-parse", "HEAD").strip,

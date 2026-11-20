@@ -32,6 +32,7 @@
 
 import {
   AbsNode,
+  AnnotationNode,
   BarNode,
   BaseNode,
   BinaryFunctionNode,
@@ -87,6 +88,7 @@ const OWN = new WeakSet<object>();
 type Construct = new (init: Record<string, unknown>) => Node;
 
 const CONSTRUCTORS: { readonly [kind: string]: Construct } = {
+  annotation: AnnotationNode as unknown as Construct,
   abs: AbsNode as unknown as Construct,
   bar: BarNode as unknown as Construct,
   base: BaseNode as unknown as Construct,

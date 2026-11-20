@@ -1,6 +1,6 @@
 /**
  * Mirrors `function/color.rb` — `Color#to_mathml_without_math_tag` (:30)
- * and `#mathml_options` (:79): `<mstyle>` over the SECOND slot, with a
+ * and `#mathml_options` (:79): `<mrow>` over the SECOND slot, with a
  * `mathcolor` — `mathbackground` when `options[:backgroundcolor]` is truthy
  * (probe color-background) — built from the FIRST slot's ASCIIMATH render,
  * whitespace- then quote-stripped (`gsub(/\s/, '').gsub('"', '')`).
@@ -44,7 +44,9 @@ import { MATHML_COLOR_SYMBOL_LITERALS } from "../../generated/mathml/render-tabl
 import { XmlElement } from "../../xml/index";
 
 export function renderColor(node: NodeOf<"color">, context: RenderContext): XmlElement {
-  const mstyle = new XmlElement("mstyle");
+  // MathML 4 makes mathcolor/mathbackground global, so they ride on an
+  // <mrow> rather than an <mstyle> (plurimath#477).
+  const mrow = new XmlElement("mrow");
   if (present(node.parameterOne)) {
     const options = hashOrNil(node.options, node.kind, "color.options");
     const key =
@@ -56,12 +58,12 @@ export function renderColor(node: NodeOf<"color">, context: RenderContext): XmlE
     // and here it is reachable from a parse: a quoted first slot carries its
     // text's raw bytes (`color("&#x2211;")(x)` renders mathcolor="∑" in the
     // gem — probe color-entity, oracle bytes e2 88 91).
-    setDecodedAttribute(mstyle, key, value, node.kind, `color.${key}`);
+    setDecodedAttribute(mrow, key, value, node.kind, `color.${key}`);
   }
   if (node.parameterTwo !== null && node.parameterTwo !== undefined) {
-    mstyle.append(renderChild(node.parameterTwo, context, "color.parameterTwo"));
+    mrow.append(renderChild(node.parameterTwo, context, "color.parameterTwo"));
   }
-  return mstyle;
+  return mrow;
 }
 
 /**

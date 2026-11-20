@@ -14,8 +14,8 @@ require "thread"
 $stdout.sync = true
 
 module OracleArtifacts
-  PIN = "2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256"
-  LOCK_SHA = "6051573ea50bb473fb12ccacb4e2ca48d5e06b9dce0dff6d2647042e76f48ebd"
+  PIN = "1a3033d0881d6c6ba655ab3ce00e0dc3cccfe5b4"
+  LOCK_SHA = "f96dc6cd975477125156e67e1e9254993dc0dd6dc4ce517dd60b42d711d2a906"
   ROOTS = %w[corpus src/unitsml/generated src/generated src/core/generated src/formatting/generated
              src/formats/html/generated src/formats/latex/generated
              src/formats/mathml/generated src/formats/omml/generated
@@ -113,11 +113,15 @@ module OracleArtifacts
                   "--out", at.call("test/formats/#{format}/degenerate-fixtures.json")]]
       end
       { "asciimath-failure-positions" => "test/formats/asciimath", "cli-fixtures" => "test/formats/cli",
-        "evaluation-fixtures" => "test/formats/evaluation", "render-options-fixtures" => "test/formats",
+        "evaluation-fixtures" => "test/formats/evaluation/ruby-8916961-v1", "render-options-fixtures" => "test/formats",
         "xml-fixtures" => "test/xml", "xml-reader-fixtures" => "test/xml" }.each do |script, dir|
         jobs << [script, "generate-#{script}.rb", ["--oracle", @oracle, "--out", at.call(dir)]]
       end
       jobs << ["render-sweeps", "generate-render-sweeps.rb", ["--oracle", @oracle, "--out", at.call("test/formats")]]
+      %w[html unicodemath to-display].each do |name|
+        jobs << ["battery-#{name}", "battery-#{name}-fixtures.rb",
+                 ["--oracle", @oracle, "--out", at.call("test/compat")]]
+      end
       jobs
     end
 
@@ -135,7 +139,11 @@ module OracleArtifacts
       end
       sweeps = %w[asciimath latex mathml].map { |format| "test/formats/#{format}/render-sweep.json" }
       raise "untracked render sweep" unless (sweeps - files).empty?
-      (roots + fixture_paths + sweeps).uniq.sort
+      # The root evaluation profile is an immutable historical reference.
+      historical = %w[test/formats/evaluation/evaluation-fixtures.json
+        test/formats/evaluation/evaluation-fixtures.manifest.yaml]
+      compat = %w[html-battery unicodemath-battery to-display].map { |name| "test/compat/#{name}-fixtures.json" }
+      ((roots + fixture_paths + sweeps + compat).uniq - historical).sort
     end
 
     def omitted_family_paths
@@ -143,6 +151,7 @@ module OracleArtifacts
         path.match?(%r{\Asrc/formats/(?:html|unicodemath)/generated/(?:parser-tables|transform-tables|provenance)\.ts\z}) ||
           path.start_with?("src/formats/html/generated-text/", "src/formats/mathml/generated-recognition/") ||
           path.match?(%r{\Atest/formats/(?:asciimath|latex|mathml)/render-sweep\.json\z}) ||
+          path.start_with?("test/compat/") ||
           path.match?(%r{\Atest/.*(?:cli-fixtures|evaluation-fixtures|render-options-fixtures|render-kinds-fixtures|ox-contract\.expected)\.(?:json|manifest\.yaml)\z})
       end
     end
@@ -322,7 +331,7 @@ module OracleArtifacts
       # only its omissions here, avoiding a third pass over the full corpus.
       second = File.join(@out, "second-generated")
       omitted_names = %w[render-sweeps html-parser-data unicodemath-parser-data html-text-data mathml-recognition-data
-                         cli-fixtures evaluation-fixtures render-options-fixtures xml-fixtures]
+                         cli-fixtures evaluation-fixtures render-options-fixtures xml-fixtures battery-html battery-unicodemath battery-to-display]
       omitted_paths = omitted_family_paths
       raise "empty omitted-family inventory" if omitted_paths.empty?
       deterministic = false

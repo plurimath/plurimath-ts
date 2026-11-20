@@ -1013,6 +1013,25 @@ describe("OMML first vertical slice", () => {
     );
   });
 
+  it.each(["thickmathspace", "0.2778em"])(
+    "renders an explicit %s invisible multiplication space in both OMML paths",
+    (rspace) => {
+      const spaced = new SymbolNode({ value: "&#x2062;", options: { rspace } });
+      expect(toOmmlWithoutMathTag(spaced)).toBe("&#x2004;");
+      expect(toOmml(new FormulaNode({ value: [spaced] }))).toBe(
+        xml(
+          ROOT_OPEN,
+          "  <m:oMath>",
+          "    <m:r>",
+          "      <m:t>&#x2004;</m:t>",
+          "    </m:r>",
+          "  </m:oMath>",
+          "</m:oMathPara>",
+        ),
+      );
+    },
+  );
+
   it("pins the unary and binary carrier defaults", () => {
     expect(
       toOmmlWithoutMathTag(

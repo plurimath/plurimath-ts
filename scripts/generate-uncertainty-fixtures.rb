@@ -60,11 +60,8 @@ abort "seed must be a nonempty array of unique strings" unless
 
 sha = ->(path) { Digest::SHA256.file(path).hexdigest }
 
-# Fields the oracle has gained since the commit corpus/census.yaml was measured
-# against. The port models the census, so such a field is dropped from the
-# model when it holds nil and recorded under "projection"; a non-nil value means
-# the input exercises the new field and generation stops instead.
-CENSUS_LAG = { "Math::Function::Uncertainty" => %w[distribution] }.freeze
+# The census now includes every measured uncertainty field.
+CENSUS_LAG = {}.freeze
 
 project = lambda do |value|
   case value

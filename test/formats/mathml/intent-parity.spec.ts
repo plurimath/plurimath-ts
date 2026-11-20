@@ -243,7 +243,7 @@ describe("the intent option", () => {
     expect(toMathml(tree, { intent: true, unaryFunctionSpacing: false })).toMatch(
       /<mrow intent=":function">\s*<mi>sin<\/mi>/,
     );
-    expect(toMathml(tree, { intent: true })).toContain('<mo rspace="thickmathspace"/>');
+    expect(toMathml(tree, { intent: true })).toContain('<mo rspace="0.2778em"/>');
   });
 
   it("rendering twice gives the same bytes and leaves the tree untouched", () => {

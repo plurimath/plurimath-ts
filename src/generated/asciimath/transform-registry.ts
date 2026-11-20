@@ -12,7 +12,7 @@
  * rather than by hand.
  *
  * The reachable set is measured, never inferred: every `get_class`
- * argument in `asciimath/transform.rb` and `asciimath/utility.rb`
+ * argument in `asciimath/mapper/rules.rb` and `asciimath/utility.rb`
  * (a captured identifier is enumerated through its grammar token range),
  * plus the two Utility tables the actions read. Resolution goes through
  * the gem because it is not mechanical capitalization: `overbrace`,

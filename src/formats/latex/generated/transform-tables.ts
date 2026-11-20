@@ -578,6 +578,13 @@ export const LATEX_TRANSFORM_TABLE_CLASS: readonly LatexTransformClassEntry[] = 
     sources: ["matrices"],
   },
   {
+    name: "cases",
+    rubyClass: "Math::Function::Table::Cases",
+    disposition: "aliased",
+    carrier: "Math::Function::Table",
+    sources: ["matrices"],
+  },
+  {
     name: "matrix",
     rubyClass: "Math::Function::Table::Matrix",
     disposition: "aliased",

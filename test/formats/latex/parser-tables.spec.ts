@@ -10,7 +10,7 @@
  *
  * The headline is the **collision**. `Constants.symbols_constants` is
  * `SYMBOLS.merge(symbols_hash)` — a Symbol-keyed table merged into a
- * String-keyed one — so nineteen texts are present twice, once as `:operant`
+ * String-keyed one — so twenty-two texts are present twice, once as `:operant`
  * and once as `:symbols`, and `dynamic_rules` (`latex/parse.rb:221`) gives the
  * two different grammars. `:operant` matches the bare text *or* the
  * backslashed one; `:symbols` matches only the backslashed one. A JavaScript
@@ -61,7 +61,7 @@ describe("the tables arr_to_expression folds into ordered choices", () => {
     expect(LATEX_LPAREN.length).toBe(40);
     expect(LATEX_RPAREN.length).toBe(149);
     expect(LATEX_LEFT_RIGHT_PARENS.length).toBe(24);
-    expect(LATEX_ENVIRONMENTS.length).toBe(10);
+    expect(LATEX_ENVIRONMENTS.length).toBe(11);
   });
 
   it("keeps the small tables in the gem's declaration order, entry for entry", () => {
@@ -91,6 +91,7 @@ describe("the tables arr_to_expression folds into ordered choices", () => {
       "split",
       "align",
       "array",
+      "cases",
     ]);
     // Both `left_parens` (`:58`) and `right_parens` (`:62`) are built from
     // this one array. Not a copy-paste slip: the hash maps delimiter token ->
@@ -165,7 +166,7 @@ describe("the tables arr_to_expression folds into ordered choices", () => {
 
 describe("the symbol alternation hash_to_expression folds", () => {
   it("carries every entry the gem's table holds", () => {
-    expect(LATEX_SYMBOL_CONSTANTS.length).toBe(3327);
+    expect(LATEX_SYMBOL_CONSTANTS.length).toBe(3330);
   });
 
   it("is ordered by descending text length, so a longer token always wins", () => {
@@ -195,7 +196,7 @@ describe("the symbol alternation hash_to_expression folds", () => {
       ["fonts", 31],
       ["operant", 22],
       ["power_base", 3],
-      ["symbols", 3221],
+      ["symbols", 3224],
       ["ternary", 4],
       ["text", 2],
       ["unary", 37],
@@ -205,7 +206,7 @@ describe("the symbol alternation hash_to_expression folds", () => {
 });
 
 describe("the Symbol/String collision the tuple array exists to survive", () => {
-  it("names the nineteen texts the gem's table holds twice", () => {
+  it("names the twenty-two texts the gem's table holds twice", () => {
     expect(LATEX_SYMBOL_CONSTANT_COLLISIONS).toStrictEqual([
       "!",
       "#",
@@ -213,6 +214,7 @@ describe("the Symbol/String collision the tuple array exists to survive", () => 
       "%",
       "&",
       "'",
+      "*",
       "+",
       ",",
       "-",
@@ -226,6 +228,8 @@ describe("the Symbol/String collision the tuple array exists to survive", () => 
       "?",
       "@",
       "^",
+      "_",
+      "|",
     ]);
   });
 
@@ -245,7 +249,7 @@ describe("the Symbol/String collision the tuple array exists to survive", () => 
     expect(repeated.sort()).toStrictEqual([...LATEX_SYMBOL_CONSTANT_COLLISIONS].sort());
   });
 
-  it("loses exactly nineteen alternatives the moment it is keyed by text", () => {
+  it("loses exactly twenty-two alternatives the moment it is keyed by text", () => {
     // The defect this shape prevents, demonstrated rather than described: a
     // `Map` (or an object literal) built from the same pairs silently drops
     // one entry of every colliding pair, and the survivor is the LAST one —
@@ -288,7 +292,7 @@ describe("the generated tables' provenance", () => {
   it("records the oracle the rest of this repository is pinned to", () => {
     expect(LATEX_PARSER_GENERATED_PROVENANCE.oracle).toBe("plurimath");
     expect(LATEX_PARSER_GENERATED_PROVENANCE.oracleCommit).toBe(
-      "2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256",
+      "1a3033d0881d6c6ba655ab3ce00e0dc3cccfe5b4",
     );
     expect(LATEX_PARSER_GENERATED_PROVENANCE.oracleClean).toBe(true);
   });

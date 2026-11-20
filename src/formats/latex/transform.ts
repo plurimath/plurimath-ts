@@ -798,6 +798,10 @@ function columnText(column: unknown): unknown {
  * those tables genuinely carry nil parens.
  */
 function environmentParens(environment: unknown): { open: unknown; close: unknown } {
+  // Mapper#environment supplies the open-ended brace explicitly for cases.
+  if (rubyToS(environment) === "cases") {
+    return { open: symbolsClass("{", true), close: symbolsClass(":}", true) };
+  }
   const openParen = MATRICES.get(rubyToS(environment)) ?? null;
   const closeParen =
     openParen === null ? null : (LATEX_MATRICES_PARENTHESIS.get(openParen) ?? null);

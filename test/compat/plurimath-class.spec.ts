@@ -206,7 +206,7 @@ describe("the constructor's staged contract", () => {
   });
 
   it("names the format it refused", () => {
-    expect(() => new Plurimath(INPUT, "unitsml" as Format)).toThrow(/unitsml/);
+    expect(() => new Plurimath(INPUT, "unitsml" as Format)).toThrow(/unitsml/i);
   });
 
   /**

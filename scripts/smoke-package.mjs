@@ -51,7 +51,9 @@ for (const mode of ["module", "commonjs"]) {
        const {parseAsciimath}=await import('@plurimath/plurimath-ts/asciimath');
        const {toLatex}=await import('@plurimath/plurimath-ts/latex');
        assert.equal(toLatex(parseAsciimath('2')), '2');
-        const {evaluateRequest}=await import('@plurimath/plurimath-ts');
+        const {evaluateRequest,parse,Plurimath}=await import('@plurimath/plurimath-ts');
+        assert.equal(parse('kg','unitsml').inputString,'kg');
+        assert.equal(new Plurimath('kg','unitsml').toHtml(),'kg');
         const result=JSON.parse(evaluateRequest(JSON.stringify({schema:'plurimath.evaluate.numeric/1',ast:{type:'number',text:'2.10'}})));
         assert.deepEqual(result.result.value,{kind:'rational',numerator:'21',denominator:'10'});
         const {createRequire}=await import('node:module');
@@ -65,7 +67,9 @@ for (const mode of ["module", "commonjs"]) {
        const {parseAsciimath}=require('@plurimath/plurimath-ts/asciimath');
        const {toLatex}=require('@plurimath/plurimath-ts/latex');
        assert.equal(toLatex(parseAsciimath('2')), '2');
-        const {evaluateRequest}=require('@plurimath/plurimath-ts');
+        const {evaluateRequest,parse,Plurimath}=require('@plurimath/plurimath-ts');
+        assert.equal(parse('kg','unitsml').inputString,'kg');
+        assert.equal(new Plurimath('kg','unitsml').toHtml(),'kg');
         const result=JSON.parse(evaluateRequest(JSON.stringify({schema:'plurimath.evaluate.numeric/1',ast:{type:'number',text:'2.10'}})));
         assert.deepEqual(result.result.value,{kind:'rational',numerator:'21',denominator:'10'});
         const {readFileSync}=require('node:fs');
@@ -80,6 +84,8 @@ const source = `import {parse} from '@plurimath/plurimath-ts';
 import {toLatex} from '@plurimath/plurimath-ts/latex';
 import {createMathmlParser} from '@plurimath/plurimath-ts/mathml/leptris';
 const formula = parse('2', 'asciimath');
+const unit = parse('kg', 'unitsml');
+void unit;
 import {evaluateRequest} from '@plurimath/plurimath-ts';
 const wire: string = evaluateRequest('{}');
 void wire;
@@ -105,6 +111,7 @@ for (const extension of ["mts", "cts"]) {
 const cli = join(scratch, "node_modules/.bin/plurimath");
 assert.match(run(cli, ["--help"]), /Usage:/i);
 assert.equal(run(cli, ["convert", "--from", "asciimath", "--to", "latex"], scratch, "2\n"), "2\n");
+assert.equal(run(cli, ["convert", "--from", "unitsml", "--to", "html"], scratch, "kg\n"), "kg\n");
 if (process.env.GITHUB_OUTPUT) {
   const { appendFileSync } = await import("node:fs");
   appendFileSync(process.env.GITHUB_OUTPUT, `tarball=${tarball}\n`);

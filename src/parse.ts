@@ -1,13 +1,14 @@
 /** Root input dispatcher. Format tokens match the compat constructor. */
 import type { Format } from "./compat/index";
 import { describeThrown, requireKnownParseOptions } from "./core/errors";
-import { type FormulaNode, InvalidTypeError, ParseError } from "./core/index";
+import { type FormulaNode, InvalidTypeError } from "./core/index";
 import { type AsciimathParseOptions, parseAsciimath } from "./formats/asciimath/index";
 import { type HtmlParseOptions, parseHtml } from "./formats/html/index";
 import { type LatexParseOptions, parseLatex } from "./formats/latex/index";
 import { parseMathml } from "./formats/mathml/index";
 import { parseOmml } from "./formats/omml/index";
 import { parseUnicodemath, type UnicodemathParseOptions } from "./formats/unicodemath/index";
+import { parseUnitsml } from "./unitsml/input";
 
 /** XML parsers currently accept no parse options; an empty object is allowed. */
 export type ParseOptions<F extends Format> = F extends "asciimath"
@@ -21,15 +22,14 @@ export type ParseOptions<F extends Format> = F extends "asciimath"
         : Record<string, never>;
 
 const NO_XML_OPTIONS: ReadonlySet<string> = new Set();
-// Same accepted-token order as Math.parse and the compat constructor; UnitsML
-// is recognized at runtime but excluded from Format: standalone Math.parse fails.
+// Keep the original accepted-token order shared with the compat constructor.
 const PARSE_TYPES = ["omml", "html", "latex", "mathml", "unitsml", "unicode", "asciimath"];
 
 /**
  * Reads a formula through its format's existing parser. Text formats forward
  * locale and diagnostic options unchanged. MathML and OMML reject option keys
- * before reading XML. Unknown formats raise InvalidTypeError; the recognized
- * standalone UnitsML input raises ParseError, as its reference boundary does.
+ * before reading XML. Standalone UnitsML accepts no parse options. Unknown
+ * formats raise InvalidTypeError.
  */
 export function parse<F extends Format>(
   input: string,
@@ -53,12 +53,8 @@ export function parse(input: string, format: string, options?: object | null): F
       requireKnownParseOptions(options, NO_XML_OPTIONS);
       return parseOmml(input);
     case "unitsml":
-      throw new ParseError(
-        "standalone unitsml parsing cannot retain the input string",
-        input,
-        format,
-        0,
-      );
+      requireKnownParseOptions(options, NO_XML_OPTIONS);
+      return parseUnitsml(input);
     default:
       throw new InvalidTypeError(
         typeof format === "string" ? format : describeThrown(format),

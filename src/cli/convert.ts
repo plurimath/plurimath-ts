@@ -4,7 +4,7 @@
  * MathML/OMML options through `src/compat/render-options.ts`.
  *
  * The CLI input surface (`INPUT_FORMATS` below) accepts the six formats
- * registered by the compat constructor. UnitsML has no registered parser.
+ * plus standalone UnitsML registered by the compat constructor.
  * Every compat `to<Format>()` method works, so all six are output formats.
  *
  * CLI format tokens use each format's own directory name under `src/formats`
@@ -23,6 +23,7 @@ export const INPUT_FORMATS = [
   "html",
   "unicodemath",
   "omml",
+  "unitsml",
 ] as const;
 export type InputFormat = (typeof INPUT_FORMATS)[number];
 
@@ -51,6 +52,7 @@ const TO_COMPAT_INPUT_FORMAT: Record<InputFormat, CompatFormat> = {
   html: "html",
   unicodemath: "unicode",
   omml: "omml",
+  unitsml: "unitsml",
 };
 
 /**

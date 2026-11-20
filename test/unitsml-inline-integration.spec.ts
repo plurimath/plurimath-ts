@@ -124,16 +124,33 @@ describe("inline UnitsML against the measured Plurimath pipeline", () => {
     }
   });
 
-  it("keeps the standalone reference failure distinct from inline support", () => {
-    for (const run of [
-      () => parse("kg", "unitsml" as never),
-      () => new Plurimath("kg", "unitsml" as never),
-    ]) {
-      expect(run).toThrow(ParseError);
-      try {
-        run();
-      } catch (error) {
-        expect(error).toMatchObject({ input: "kg", format: "unitsml" });
+  it("shares the measured unit model and writers while retaining each input's source", () => {
+    // Ruby b0a695cb wraps standalone UnitsML in a Formula, as it does inline units.
+    const expected = {
+      class: "Math::Formula",
+      fields: {
+        displaystyle: true,
+        // biome-ignore lint/style/useNamingConvention: Ruby's normalized model field.
+        input_string: "kg",
+        // biome-ignore lint/style/useNamingConvention: Ruby's normalized model field.
+        left_right_wrapper: true,
+        value: [{ class: "Math::Function::Unitsml", fields: { text: "kg" } }],
+      },
+    };
+    const inline = parseAsciimath('"unitsml(kg)"');
+    expect(normalize(inline)).toStrictEqual({
+      ...expected,
+      fields: {
+        ...expected.fields,
+        // biome-ignore lint/style/useNamingConvention: Ruby's normalized model field.
+        input_string: '"unitsml(kg)"',
+      },
+    });
+    for (const formula of [parse("kg", "unitsml"), new Plurimath("kg", "unitsml").data]) {
+      expect(normalize(formula)).toStrictEqual(expected);
+      expect(toLatex(formula)).toBe("\\mathrm{kg}");
+      for (const render of Object.values(RENDERERS)) {
+        expect(render(formula)).toBe(render(inline));
       }
     }
   });

@@ -30,8 +30,9 @@ organization are deferred.
 
 The current source and package entries provide:
 
-- Parsers exist for all six formats, exposed on their subpaths and through
-  the root `parse` function and compat constructor.
+- Parsers exist for all six math formats, exposed on their subpaths and through
+  the root `parse` function and compat constructor. The root and constructor
+  also accept standalone UnitsML input.
 - Default HTML parsing uses the checked Ruby-derived PARG artifacts on the
   Parsanol runtime, with one lazy runtime per decimal marker. Browser callers
   can supply an initialized runtime through `./html/parsanol`.
@@ -89,10 +90,10 @@ example assumes a `formula.txt` you create.
 Each parser returns a `FormulaNode` (from `./core`); each renderer takes one.
 The root also exports `parse(input, format, options?)`, returning a
 `FormulaNode`. It uses the compat format tokens: `asciimath`, `latex`, `html`,
-`unicode`, `mathml` and `omml` (`unicode`, not `unicodemath`). Text formats
-accept their existing `locale` and `onUnsupported` options; MathML and OMML
-accept absent, `null` or empty options and reject nonempty option keys with
-`ParseOptionError`. The exported `ParseOptions<F>` type selects the options
+`unicode`, `mathml`, `omml` and `unitsml` (`unicode`, not `unicodemath`). Text formats
+accept their existing `locale` and `onUnsupported` options. MathML, OMML
+and standalone UnitsML accept absent, `null` or empty options and reject
+nonempty option keys with `ParseOptionError`. The exported `ParseOptions<F>` type selects the options
 for format `F`; the compat constructor keeps its existing two arguments.
 
 ```js
@@ -307,10 +308,13 @@ p.toHtml();        // <i>x</i><sup>2</sup>
 p.toUnicodemath(); // x^(2)
 ```
 
-The constructor names six formats (`FORMATS`): `asciimath`, `latex`, `mathml`,
-`html`, `unicode` and `omml`. Note `unicode`, not `unicodemath`. All six
-construct (`asciimath`, `latex`, `html`, `unicode`, `mathml`, `omml`);
-any name the gem rejects, including `unicodemath`,
+The constructor names seven formats (`FORMATS`): `asciimath`, `latex`, `mathml`,
+`html`, `unicode`, `omml` and `unitsml`. Note `unicode`, not `unicodemath`.
+Standalone UnitsML is input only; all six output formats work with it.
+Its Formula wrapper follows Ruby commit `142bc513`, after the frozen 0.11.20
+reference. For example, `new Plurimath("kg*m*s^-2", "unitsml").toLatex()`
+uses the same UnitsML service as embedded unit expressions.
+An unrecognized input name, including `unicodemath`,
 throws `InvalidTypeError`.
 Methods: `toAsciimath`, `toLatex`, `toMathml`, `toHtml`, `toOmml`,
 `toUnicodemath` all work. `toMathml(true)` renders the gem's `intent`
@@ -395,9 +399,9 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
 - Guarded evaluation of a value whose decimal exponent passes
   `Number.MAX_SAFE_INTEGER`, such as `exp(10^19)`, raises
   `UnsupportedFeatureError` (`src/evaluation/big-decimal.ts`).
-- Standalone UnitsML input is not a public parse format. Use quoted inline
-  AsciiMath, such as `parse('"unitsml(kg)"', "asciimath")`; all six renderers
-  accept nested `unitsml` options.
+- UnitsML accepts standalone `parse("kg", "unitsml")` or quoted inline
+  AsciiMath such as `parse('"unitsml(kg)"', "asciimath")`. It is input only;
+  all six renderers accept nested `unitsml` options.
 - Constructs the renderers have not measured raise `RenderError`.
 
 ### Shared AsciiMath PARG/WASM parser

@@ -1,0 +1,885 @@
+---
+schema: plurimath-unitsml-input/1
+cases:
+- input: kg
+  model:
+    class: Math::Formula
+    fields:
+      displaystyle: true
+      input_string: kg
+      left_right_wrapper: true
+      value:
+      - class: Math::Function::Unitsml
+        fields:
+          text: kg
+  outputs:
+    asciimath:
+      value: rm(kg)
+    latex:
+      value: "\\mathrm{kg}"
+    mathml:
+      value: |
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">
+          <mrow>
+            <mrow mathvariant="normal">
+              <mi>kg</mi>
+            </mrow>
+          </mrow>
+        </math>
+    omml:
+      value: |
+        <m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+          <m:oMath>
+            <m:r>
+              <m:rPr>
+                <m:sty m:val="p"/>
+              </m:rPr>
+              <m:t>kg</m:t>
+            </m:r>
+          </m:oMath>
+        </m:oMathPara>
+    unicodemath:
+      value: \mup"kg"
+    html:
+      value: kg
+- input: m
+  model:
+    class: Math::Formula
+    fields:
+      displaystyle: true
+      input_string: m
+      left_right_wrapper: true
+      value:
+      - class: Math::Function::Unitsml
+        fields:
+          text: m
+  outputs:
+    asciimath:
+      value: rm(m)
+    latex:
+      value: "\\mathrm{m}"
+    mathml:
+      value: |
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">
+          <mrow>
+            <mrow mathvariant="normal">
+              <mi>m</mi>
+            </mrow>
+          </mrow>
+        </math>
+    omml:
+      value: |
+        <m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+          <m:oMath>
+            <m:r>
+              <m:rPr>
+                <m:sty m:val="p"/>
+              </m:rPr>
+              <m:t>m</m:t>
+            </m:r>
+          </m:oMath>
+        </m:oMathPara>
+    unicodemath:
+      value: "\\mupm"
+    html:
+      value: m
+- input: kV
+  model:
+    class: Math::Formula
+    fields:
+      displaystyle: true
+      input_string: kV
+      left_right_wrapper: true
+      value:
+      - class: Math::Function::Unitsml
+        fields:
+          text: kV
+  outputs:
+    asciimath:
+      value: rm(kV)
+    latex:
+      value: "\\mathrm{kV}"
+    mathml:
+      value: |
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">
+          <mrow>
+            <mrow mathvariant="normal">
+              <mi>kV</mi>
+            </mrow>
+          </mrow>
+        </math>
+    omml:
+      value: |
+        <m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+          <m:oMath>
+            <m:r>
+              <m:rPr>
+                <m:sty m:val="p"/>
+              </m:rPr>
+              <m:t>kV</m:t>
+            </m:r>
+          </m:oMath>
+        </m:oMathPara>
+    unicodemath:
+      value: \mup"kV"
+    html:
+      value: kV
+- input: uA
+  model:
+    class: Math::Formula
+    fields:
+      displaystyle: true
+      input_string: uA
+      left_right_wrapper: true
+      value:
+      - class: Math::Function::Unitsml
+        fields:
+          text: uA
+  outputs:
+    asciimath:
+      value: rm(&#xb5;A)
+    latex:
+      value: "\\mathrm{&#xb5;A}"
+    mathml:
+      value: |
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">
+          <mrow>
+            <mrow mathvariant="normal">
+              <mi>&#xb5;A</mi>
+            </mrow>
+          </mrow>
+        </math>
+    omml:
+      value: |
+        <m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+          <m:oMath>
+            <m:r>
+              <m:rPr>
+                <m:sty m:val="p"/>
+              </m:rPr>
+              <m:t>&#xb5;A</m:t>
+            </m:r>
+          </m:oMath>
+        </m:oMathPara>
+    unicodemath:
+      value: \mup"µA"
+    html:
+      value: "&#xb5;A"
+- input: µm
+  error: Plurimath::Math::ParseError
+- input: m^2
+  model:
+    class: Math::Formula
+    fields:
+      displaystyle: true
+      input_string: m^2
+      left_right_wrapper: true
+      value:
+      - class: Math::Function::Unitsml
+        fields:
+          text: m^2
+  outputs:
+    asciimath:
+      value: rm(m)^(2)
+    latex:
+      value: "\\mathrm{m}^{2}"
+    mathml:
+      value: |
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">
+          <mrow>
+            <msup>
+              <mrow mathvariant="normal">
+                <mi>m</mi>
+              </mrow>
+              <mn>2</mn>
+            </msup>
+          </mrow>
+        </math>
+    omml:
+      value: |
+        <m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+          <m:oMath>
+            <m:sSup>
+              <m:sSupPr>
+                <m:ctrlPr>
+                  <w:rPr>
+                    <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>
+                    <w:i/>
+                  </w:rPr>
+                </m:ctrlPr>
+              </m:sSupPr>
+              <m:e>
+                <m:r>
+                  <m:rPr>
+                    <m:sty m:val="p"/>
+                  </m:rPr>
+                  <m:t>m</m:t>
+                </m:r>
+              </m:e>
+              <m:sup>
+                <m:r>
+                  <m:t>2</m:t>
+                </m:r>
+              </m:sup>
+            </m:sSup>
+          </m:oMath>
+        </m:oMathPara>
+    unicodemath:
+      value: "\\mupm^(2)"
+    html:
+      value: m<sup>2</sup>
+- input: s^-2
+  model:
+    class: Math::Formula
+    fields:
+      displaystyle: true
+      input_string: s^-2
+      left_right_wrapper: true
+      value:
+      - class: Math::Function::Unitsml
+        fields:
+          text: s^-2
+  outputs:
+    asciimath:
+      value: rm(s)^(- 2)
+    latex:
+      value: "\\mathrm{s}^{- 2}"
+    mathml:
+      value: |
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">
+          <mrow>
+            <msup>
+              <mrow mathvariant="normal">
+                <mi>s</mi>
+              </mrow>
+              <mrow>
+                <mo>&#x2212;</mo>
+                <mn>2</mn>
+              </mrow>
+            </msup>
+          </mrow>
+        </math>
+    omml:
+      value: |
+        <m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+          <m:oMath>
+            <m:sSup>
+              <m:sSupPr>
+                <m:ctrlPr>
+                  <w:rPr>
+                    <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>
+                    <w:i/>
+                  </w:rPr>
+                </m:ctrlPr>
+              </m:sSupPr>
+              <m:e>
+                <m:r>
+                  <m:rPr>
+                    <m:sty m:val="p"/>
+                  </m:rPr>
+                  <m:t>s</m:t>
+                </m:r>
+              </m:e>
+              <m:sup>
+                <m:r>
+                  <m:t>&#x2212;</m:t>
+                </m:r>
+                <m:r>
+                  <m:t>2</m:t>
+                </m:r>
+              </m:sup>
+            </m:sSup>
+          </m:oMath>
+        </m:oMathPara>
+    unicodemath:
+      value: "\\mups^(− 2)"
+    html:
+      value: s<sup>&#x2212; 2</sup>
+- input: kg*m*s^-2
+  model:
+    class: Math::Formula
+    fields:
+      displaystyle: true
+      input_string: kg*m*s^-2
+      left_right_wrapper: true
+      value:
+      - class: Math::Function::Unitsml
+        fields:
+          text: kg*m*s^-2
+  outputs:
+    asciimath:
+      value: rm(kg) * rm(m) * rm(s)^(- 2)
+    latex:
+      value: "\\mathrm{kg} \\cdot \\mathrm{m} \\cdot \\mathrm{s}^{- 2}"
+    mathml:
+      value: |
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">
+          <mrow>
+            <mrow mathvariant="normal">
+              <mi>kg</mi>
+            </mrow>
+            <mo>&#x22c5;</mo>
+            <mrow mathvariant="normal">
+              <mi>m</mi>
+            </mrow>
+            <mo>&#x22c5;</mo>
+            <msup>
+              <mrow mathvariant="normal">
+                <mi>s</mi>
+              </mrow>
+              <mrow>
+                <mo>&#x2212;</mo>
+                <mn>2</mn>
+              </mrow>
+            </msup>
+          </mrow>
+        </math>
+    omml:
+      value: |
+        <m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+          <m:oMath>
+            <m:r>
+              <m:rPr>
+                <m:sty m:val="p"/>
+              </m:rPr>
+              <m:t>kg</m:t>
+            </m:r>
+            <m:r>
+              <m:t>&#x22c5;</m:t>
+            </m:r>
+            <m:r>
+              <m:rPr>
+                <m:sty m:val="p"/>
+              </m:rPr>
+              <m:t>m</m:t>
+            </m:r>
+            <m:r>
+              <m:t>&#x22c5;</m:t>
+            </m:r>
+            <m:sSup>
+              <m:sSupPr>
+                <m:ctrlPr>
+                  <w:rPr>
+                    <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>
+                    <w:i/>
+                  </w:rPr>
+                </m:ctrlPr>
+              </m:sSupPr>
+              <m:e>
+                <m:r>
+                  <m:rPr>
+                    <m:sty m:val="p"/>
+                  </m:rPr>
+                  <m:t>s</m:t>
+                </m:r>
+              </m:e>
+              <m:sup>
+                <m:r>
+                  <m:t>&#x2212;</m:t>
+                </m:r>
+                <m:r>
+                  <m:t>2</m:t>
+                </m:r>
+              </m:sup>
+            </m:sSup>
+          </m:oMath>
+        </m:oMathPara>
+    unicodemath:
+      value: \mup"kg" ⋅ \mupm ⋅ \mups^(− 2)
+    html:
+      value: kg &#x22c5; m &#x22c5; s<sup>&#x2212; 2</sup>
+- input: m^(1/2)
+  model:
+    class: Math::Formula
+    fields:
+      displaystyle: true
+      input_string: m^(1/2)
+      left_right_wrapper: true
+      value:
+      - class: Math::Function::Unitsml
+        fields:
+          text: m^(1/2)
+  outputs:
+    asciimath:
+      value: rm(m)^(1/2)
+    latex:
+      value: "\\mathrm{m}^{1/2}"
+    mathml:
+      value: |
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">
+          <mrow>
+            <msup>
+              <mrow mathvariant="normal">
+                <mi>m</mi>
+              </mrow>
+              <mn>1/2</mn>
+            </msup>
+          </mrow>
+        </math>
+    omml:
+      value: |
+        <m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+          <m:oMath>
+            <m:sSup>
+              <m:sSupPr>
+                <m:ctrlPr>
+                  <w:rPr>
+                    <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>
+                    <w:i/>
+                  </w:rPr>
+                </m:ctrlPr>
+              </m:sSupPr>
+              <m:e>
+                <m:r>
+                  <m:rPr>
+                    <m:sty m:val="p"/>
+                  </m:rPr>
+                  <m:t>m</m:t>
+                </m:r>
+              </m:e>
+              <m:sup>
+                <m:r>
+                  <m:t>1/2</m:t>
+                </m:r>
+              </m:sup>
+            </m:sSup>
+          </m:oMath>
+        </m:oMathPara>
+    unicodemath:
+      value: "\\mupm^(1/2)"
+    html:
+      value: m<sup>1/2</sup>
+- input: sqrt(m)
+  model:
+    class: Math::Formula
+    fields:
+      displaystyle: true
+      input_string: sqrt(m)
+      left_right_wrapper: true
+      value:
+      - class: Math::Function::Unitsml
+        fields:
+          text: sqrt(m)
+  outputs:
+    asciimath:
+      value: rm(m)^(0.5)
+    latex:
+      value: "\\mathrm{m}^{0.5}"
+    mathml:
+      value: |
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">
+          <mrow>
+            <msup>
+              <mrow mathvariant="normal">
+                <mi>m</mi>
+              </mrow>
+              <mn>0.5</mn>
+            </msup>
+          </mrow>
+        </math>
+    omml:
+      value: |
+        <m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+          <m:oMath>
+            <m:sSup>
+              <m:sSupPr>
+                <m:ctrlPr>
+                  <w:rPr>
+                    <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>
+                    <w:i/>
+                  </w:rPr>
+                </m:ctrlPr>
+              </m:sSupPr>
+              <m:e>
+                <m:r>
+                  <m:rPr>
+                    <m:sty m:val="p"/>
+                  </m:rPr>
+                  <m:t>m</m:t>
+                </m:r>
+              </m:e>
+              <m:sup>
+                <m:r>
+                  <m:t>0.5</m:t>
+                </m:r>
+              </m:sup>
+            </m:sSup>
+          </m:oMath>
+        </m:oMathPara>
+    unicodemath:
+      value: "\\mupm^(0.5)"
+    html:
+      value: m<sup>0.5</sup>
+- input: "(kg*m)/s^2"
+  model:
+    class: Math::Formula
+    fields:
+      displaystyle: true
+      input_string: "(kg*m)/s^2"
+      left_right_wrapper: true
+      value:
+      - class: Math::Function::Unitsml
+        fields:
+          text: "(kg*m)/s^2"
+  outputs:
+    asciimath:
+      value: rm(kg) * rm(m) * rm(s)^(- 2)
+    latex:
+      value: "\\mathrm{kg} \\cdot \\mathrm{m} \\cdot \\mathrm{s}^{- 2}"
+    mathml:
+      value: |
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">
+          <mrow>
+            <mrow mathvariant="normal">
+              <mi>kg</mi>
+            </mrow>
+            <mo>&#x22c5;</mo>
+            <mrow mathvariant="normal">
+              <mi>m</mi>
+            </mrow>
+            <mo>&#x22c5;</mo>
+            <msup>
+              <mrow mathvariant="normal">
+                <mi>s</mi>
+              </mrow>
+              <mrow>
+                <mo>&#x2212;</mo>
+                <mn>2</mn>
+              </mrow>
+            </msup>
+          </mrow>
+        </math>
+    omml:
+      value: |
+        <m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+          <m:oMath>
+            <m:r>
+              <m:rPr>
+                <m:sty m:val="p"/>
+              </m:rPr>
+              <m:t>kg</m:t>
+            </m:r>
+            <m:r>
+              <m:t>&#x22c5;</m:t>
+            </m:r>
+            <m:r>
+              <m:rPr>
+                <m:sty m:val="p"/>
+              </m:rPr>
+              <m:t>m</m:t>
+            </m:r>
+            <m:r>
+              <m:t>&#x22c5;</m:t>
+            </m:r>
+            <m:sSup>
+              <m:sSupPr>
+                <m:ctrlPr>
+                  <w:rPr>
+                    <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>
+                    <w:i/>
+                  </w:rPr>
+                </m:ctrlPr>
+              </m:sSupPr>
+              <m:e>
+                <m:r>
+                  <m:rPr>
+                    <m:sty m:val="p"/>
+                  </m:rPr>
+                  <m:t>s</m:t>
+                </m:r>
+              </m:e>
+              <m:sup>
+                <m:r>
+                  <m:t>&#x2212;</m:t>
+                </m:r>
+                <m:r>
+                  <m:t>2</m:t>
+                </m:r>
+              </m:sup>
+            </m:sSup>
+          </m:oMath>
+        </m:oMathPara>
+    unicodemath:
+      value: \mup"kg" ⋅ \mupm ⋅ \mups^(− 2)
+    html:
+      value: kg &#x22c5; m &#x22c5; s<sup>&#x2212; 2</sup>
+- input: '1'
+  model:
+    class: Math::Formula
+    fields:
+      displaystyle: true
+      input_string: '1'
+      left_right_wrapper: true
+      value:
+      - class: Math::Function::Unitsml
+        fields:
+          text: '1'
+  outputs:
+    asciimath:
+      value: rm(1)
+    latex:
+      value: "\\mathrm{1}"
+    mathml:
+      value: |
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">
+          <mrow>
+            <mrow mathvariant="normal">
+              <mi>1</mi>
+            </mrow>
+          </mrow>
+        </math>
+    omml:
+      value: |
+        <m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+          <m:oMath>
+            <m:r>
+              <m:rPr>
+                <m:sty m:val="p"/>
+              </m:rPr>
+              <m:t>1</m:t>
+            </m:r>
+          </m:oMath>
+        </m:oMathPara>
+    unicodemath:
+      value: "\\mup1"
+    html:
+      value: '1'
+- input: 2*kg
+  error: Plurimath::Math::ParseError
+- input: unitsml(kg)
+  model:
+    class: Math::Formula
+    fields:
+      displaystyle: true
+      input_string: unitsml(kg)
+      left_right_wrapper: true
+      value:
+      - class: Math::Function::Unitsml
+        fields:
+          text: unitsml(kg)
+  outputs:
+    asciimath:
+      value: rm(kg)
+    latex:
+      value: "\\mathrm{kg}"
+    mathml:
+      value: |
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">
+          <mrow>
+            <mrow mathvariant="normal">
+              <mi>kg</mi>
+            </mrow>
+          </mrow>
+        </math>
+    omml:
+      value: |
+        <m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+          <m:oMath>
+            <m:r>
+              <m:rPr>
+                <m:sty m:val="p"/>
+              </m:rPr>
+              <m:t>kg</m:t>
+            </m:r>
+          </m:oMath>
+        </m:oMathPara>
+    unicodemath:
+      value: \mup"kg"
+    html:
+      value: kg
+- input: unitsml(m^2)
+  model:
+    class: Math::Formula
+    fields:
+      displaystyle: true
+      input_string: unitsml(m^2)
+      left_right_wrapper: true
+      value:
+      - class: Math::Function::Unitsml
+        fields:
+          text: unitsml(m^2)
+  outputs:
+    asciimath:
+      value: rm(m)^(2)
+    latex:
+      value: "\\mathrm{m}^{2}"
+    mathml:
+      value: |
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">
+          <mrow>
+            <msup>
+              <mrow mathvariant="normal">
+                <mi>m</mi>
+              </mrow>
+              <mn>2</mn>
+            </msup>
+          </mrow>
+        </math>
+    omml:
+      value: |
+        <m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+          <m:oMath>
+            <m:sSup>
+              <m:sSupPr>
+                <m:ctrlPr>
+                  <w:rPr>
+                    <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>
+                    <w:i/>
+                  </w:rPr>
+                </m:ctrlPr>
+              </m:sSupPr>
+              <m:e>
+                <m:r>
+                  <m:rPr>
+                    <m:sty m:val="p"/>
+                  </m:rPr>
+                  <m:t>m</m:t>
+                </m:r>
+              </m:e>
+              <m:sup>
+                <m:r>
+                  <m:t>2</m:t>
+                </m:r>
+              </m:sup>
+            </m:sSup>
+          </m:oMath>
+        </m:oMathPara>
+    unicodemath:
+      value: "\\mupm^(2)"
+    html:
+      value: m<sup>2</sup>
+- input: 'kg,quantity: mass'
+  model:
+    class: Math::Formula
+    fields:
+      displaystyle: true
+      input_string: 'kg,quantity: mass'
+      left_right_wrapper: true
+      value:
+      - class: Math::Function::Unitsml
+        fields:
+          text: 'kg,quantity: mass'
+  outputs:
+    asciimath:
+      value: rm(kg)
+    latex:
+      value: "\\mathrm{kg}"
+    mathml:
+      value: |
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">
+          <mrow>
+            <mrow mathvariant="normal">
+              <mi>kg</mi>
+            </mrow>
+          </mrow>
+        </math>
+    omml:
+      value: |
+        <m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+          <m:oMath>
+            <m:r>
+              <m:rPr>
+                <m:sty m:val="p"/>
+              </m:rPr>
+              <m:t>kg</m:t>
+            </m:r>
+          </m:oMath>
+        </m:oMathPara>
+    unicodemath:
+      value: \mup"kg"
+    html:
+      value: kg
+- input: 'm,name: length'
+  model:
+    class: Math::Formula
+    fields:
+      displaystyle: true
+      input_string: 'm,name: length'
+      left_right_wrapper: true
+      value:
+      - class: Math::Function::Unitsml
+        fields:
+          text: 'm,name: length'
+  outputs:
+    asciimath:
+      value: rm(m)
+    latex:
+      value: "\\mathrm{m}"
+    mathml:
+      value: |
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">
+          <mrow>
+            <mrow mathvariant="normal">
+              <mi>m</mi>
+            </mrow>
+          </mrow>
+        </math>
+    omml:
+      value: |
+        <m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+          <m:oMath>
+            <m:r>
+              <m:rPr>
+                <m:sty m:val="p"/>
+              </m:rPr>
+              <m:t>m</m:t>
+            </m:r>
+          </m:oMath>
+        </m:oMathPara>
+    unicodemath:
+      value: "\\mupm"
+    html:
+      value: m
+- input: " kg "
+  error: Plurimath::Math::ParseError
+- input: m^x
+  error: Plurimath::Math::ParseError
+- input: zzz
+  error: Plurimath::Math::ParseError
+- input: ''
+  error: Plurimath::Math::ParseError
+- input: unitsml(zzz)
+  error: Plurimath::Math::ParseError
+- input: kg)
+  error: Plurimath::Math::ParseError
+- input: unitsml(kg
+  model:
+    class: Math::Formula
+    fields:
+      displaystyle: true
+      input_string: unitsml(kg
+      left_right_wrapper: true
+      value:
+      - class: Math::Function::Unitsml
+        fields:
+          text: unitsml(kg
+  outputs:
+    asciimath:
+      value: rm(kg)
+    latex:
+      value: "\\mathrm{kg}"
+    mathml:
+      value: |
+        <math xmlns="http://www.w3.org/1998/Math/MathML" display="block" displaystyle="true">
+          <mrow>
+            <mrow mathvariant="normal">
+              <mi>kg</mi>
+            </mrow>
+          </mrow>
+        </math>
+    omml:
+      value: |
+        <m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+          <m:oMath>
+            <m:r>
+              <m:rPr>
+                <m:sty m:val="p"/>
+              </m:rPr>
+              <m:t>kg</m:t>
+            </m:r>
+          </m:oMath>
+        </m:oMathPara>
+    unicodemath:
+      value: \mup"kg"
+    html:
+      value: kg

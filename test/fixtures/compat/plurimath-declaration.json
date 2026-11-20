@@ -51,7 +51,7 @@
             "rest": false,
             "type": {
               "alias": "Format",
-              "literals": ["asciimath", "latex", "mathml", "html", "unicode", "omml"]
+              "literals": ["asciimath", "latex", "mathml", "html", "unicode", "omml", "unitsml"]
             }
           }
         ]
@@ -145,7 +145,13 @@
       "path": "constructor.parameters[1].type.alias",
       "sourceHead": "Opal.Plurimath.Math.Format",
       "port": "Format",
-      "reason": "Name only: the port has no Opal namespace, so the union is its own exported alias. Its literals are identical to source head's, in the same order (no difference is recorded for `.literals`)."
+      "reason": "Name only: the port has no Opal namespace, so the union is its own exported alias. The added standalone UnitsML input is recorded separately below."
+    },
+    {
+      "path": "constructor.parameters[1].type.literals",
+      "sourceHead": ["asciimath", "latex", "mathml", "html", "unicode", "omml"],
+      "port": ["asciimath", "latex", "mathml", "html", "unicode", "omml", "unitsml"],
+      "reason": "plurimath#539 requires UnitsML format parity. Ruby 142bc513 makes standalone UnitsML return a Formula; unitsml is added to the input surface and remains absent from output formats."
     }
   ]
 }

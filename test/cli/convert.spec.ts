@@ -22,8 +22,16 @@ const OMML_INPUT =
   '<m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"><m:f><m:num><m:r><m:t>1</m:t></m:r></m:num><m:den><m:r><m:t>2</m:t></m:r></m:den></m:f></m:oMath>';
 
 describe("format token guards", () => {
-  it("names exactly the six working input formats", () => {
-    expect(INPUT_FORMATS).toEqual(["asciimath", "latex", "mathml", "html", "unicodemath", "omml"]);
+  it("names the seven working input formats", () => {
+    expect(INPUT_FORMATS).toEqual([
+      "asciimath",
+      "latex",
+      "mathml",
+      "html",
+      "unicodemath",
+      "omml",
+      "unitsml",
+    ]);
   });
 
   it("names exactly the six working output formats", () => {

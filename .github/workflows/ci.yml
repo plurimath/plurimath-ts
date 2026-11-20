@@ -406,7 +406,44 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-  # Expensive generation is opt-in. Standard PR/push jobs above stay unchanged.
+  # Re-measure the standalone UnitsML input added after the frozen corpus.
+  # This focused profile has its own Ruby pin; historical payloads stay intact.
+  unitsml-input-oracle:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: source
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          repository: plurimath/plurimath
+          ref: b0a695cbc5ce31fe8d0d3934d0c93428bb6d200e
+          path: oracle
+          persist-credentials: false
+      - name: Use the frozen dependency resolution
+        working-directory: source
+        run: |
+          cp scripts/ci/oracle/Gemfile.lock ../oracle/Gemfile.lock
+          printf '%s\n' '/vendor/bundle/' >> ../oracle/.git/info/exclude
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0.1"
+          bundler: "4.0.3"
+          working-directory: oracle
+          bundler-cache: true
+        env:
+          BUNDLE_FROZEN: "true"
+      - name: Compare standalone models and all six writer outputs with Ruby
+        working-directory: source
+        env:
+          BUNDLE_GEMFILE: ${{ github.workspace }}/oracle/Gemfile
+          BUNDLE_FROZEN: "true"
+        run: bundle exec ruby scripts/probes/unitsml-input.rb --oracle "$GITHUB_WORKSPACE/oracle" --out test/formats/unitsml/standalone-input.yaml --check
+
+  # Expensive full-corpus generation remains opt-in.
   oracle-artifacts:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.oracle_artifacts }}
     # Evaluation fixtures require the oracle's glibc 2.35 (Ubuntu 22.04).

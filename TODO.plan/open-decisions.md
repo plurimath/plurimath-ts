@@ -389,12 +389,13 @@ different invariant, not a different reading of this one.
 
 **SETTLED 2026-10-13:** implement the thin root dispatcher for the current
 release. `src/index.ts` exports `parse(input, format, options?)` and
-`ParseOptions<F>`. It delegates to the six existing parsers using the current
+`ParseOptions<F>`. It delegates to the seven existing parsers using the current
 `Format` tokens (`unicode`, not `unicodemath`); it adds no aliases or parser
 semantics. Text options use their existing format interfaces. XML inputs
-accept no nonempty option keys. Invalid runtime formats and deferred UnitsML
-retain their separate error classes. The compat class and CLI input list stay
-unchanged. Runtime and built-artifact verification runs on GHA.
+accept no nonempty option keys. Standalone UnitsML now follows the Formula
+wrapper introduced in Ruby 142bc513; it accepts absent, null or empty options.
+Invalid runtime formats raise `InvalidTypeError`. The compat class and CLI
+also accept UnitsML input. Runtime and built-artifact verification runs on GHA.
 
 ## Evaluation error family (B6, first slice)
 
@@ -495,5 +496,5 @@ Settled 2026-10-12 (the user's decision): add `InvalidTypeError`
 measured in `test/compat/to-display-fixtures.json`, and `toDisplay` now raises
 `InvalidTypeError` too. The compat constructor raises it for a type outside the
 gem's `Math::VALID_TYPES` (`"foo"`, `"unicodemath"`, `"HTML"`), as `Math.parse`
-does. Native MathML and OMML parsers are now registered; the deferred
-`unitsml` format still raises `UnsupportedFormatError`.
+does. Native MathML, OMML and standalone UnitsML parsers are now registered.
+Valid UnitsML input succeeds; invalid unit syntax raises `ParseError`.

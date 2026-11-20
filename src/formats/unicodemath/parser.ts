@@ -1,8 +1,9 @@
-import { ParseError } from "../../core/index";
+import { type FormulaNode, ParseError } from "../../core/index";
 import type { ParseValue, SourceMap } from "../../pegkit/index";
 import {
   postProcessing,
   preprocessOrParseError,
+  transformUnicodemathTree,
   type UnicodemathParseOptions,
   validateOptions,
 } from "./consumer";
@@ -16,6 +17,7 @@ import {
   copyCaptures,
   isStageParseError,
   positionAt,
+  withStageResourceGuard,
 } from "../../pegkit/stage-captures";
 import { unicodemathStage } from "./stage";
 import { createUnicodemathParser } from "./umath";
@@ -30,12 +32,23 @@ export function parseUnicodemathTree(
   const tree = parsePreprocessed(input, text, map, options);
   return label === undefined ? tree : postProcessing(tree, label);
 }
-export const parseUnicodemath = createUnicodemathParser(
+const parser = createUnicodemathParser(
   {
     parse: (input, options) => unicodemathStage().parse(input, options),
   },
   artifact,
 );
+/** The prepared artifact accepts the escaped representation of lone UTF-16 halves. */
+export function parseUnicodemath(
+  input: string,
+  options?: UnicodemathParseOptions | null,
+): FormulaNode {
+  return withStageResourceGuard(input, "unicode", () => {
+    if (/[\uD800-\uDFFF]/u.test(input))
+      return transformUnicodemathTree(parseUnicodemathTree(input, options), input);
+    return parser(input, options);
+  });
+}
 function parsePreprocessed(
   input: string,
   text: string,

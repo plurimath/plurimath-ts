@@ -1,4 +1,6 @@
+import { ParseError } from "../core/errors";
 import type { ParseHash, ParseValue } from "./atom";
+import { STACK_EXHAUSTED_MESSAGE } from "./atom";
 import { Slice } from "./slice";
 export type StageCapture =
   | string
@@ -122,4 +124,28 @@ export function copyCaptures(
       });
   }
   return output;
+}
+
+/** Public default parsers keep their typed refusal contract at a WASM resource boundary.
+ * Initialized consumers still expose the original resource exception unchanged.
+ */
+export function withStageResourceGuard<T>(input: string, format: string, parse: () => T): T {
+  try {
+    return parse();
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      [
+        "NestingTooDeep",
+        "RecursionLimitExceeded",
+        "CallDepthLimitExceeded",
+        "ShapeDepthLimitExceeded",
+      ].includes(error.name)
+    ) {
+      const refusal = new ParseError(STACK_EXHAUSTED_MESSAGE, input, format, 0);
+      Object.defineProperty(refusal, "cause", { value: error, configurable: true });
+      throw refusal;
+    }
+    throw error;
+  }
 }

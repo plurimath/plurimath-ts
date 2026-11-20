@@ -1,6 +1,11 @@
-import { ParseError } from "../../core/index";
+import { type FormulaNode, ParseError } from "../../core/index";
 import type { ParseValue, SourceMap } from "../../pegkit/index";
-import { type LatexParseOptions, preprocessOrParseError, validateOptions } from "./consumer";
+import {
+  type LatexParseOptions,
+  preprocessOrParseError,
+  transformLatexTree,
+  validateOptions,
+} from "./consumer";
 
 export type { LatexParseOptions } from "./consumer";
 
@@ -10,6 +15,7 @@ import {
   copyCaptures,
   isStageParseError,
   positionAt,
+  withStageResourceGuard,
 } from "../../pegkit/stage-captures";
 import { createLatexParser } from "./latexmath";
 import { latexStage } from "./stage";
@@ -18,9 +24,17 @@ export function parseLatexTree(input: string, options?: LatexParseOptions | null
   const { text, map } = preprocessOrParseError(input);
   return parsePreprocessed(input, text, map, options);
 }
-export const parseLatex = createLatexParser({
+const parser = createLatexParser({
   parse: (input, { decimal }) => latexStage().parse(input, { decimal: decimal as "." | "," | "٫" }),
 });
+/** Keep UTF-16-only input on the same artifact's preprocessed capture entry. */
+export function parseLatex(input: string, options?: LatexParseOptions | null): FormulaNode {
+  return withStageResourceGuard(input, "latex", () => {
+    if (/[\uD800-\uDFFF]/u.test(input))
+      return transformLatexTree(parseLatexTree(input, options), input);
+    return parser(input, options);
+  });
+}
 function parsePreprocessed(
   input: string,
   text: string,

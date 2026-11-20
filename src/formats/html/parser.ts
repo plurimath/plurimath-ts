@@ -32,9 +32,11 @@
  * back through the `SourceMap` before it reaches a caller as
  * `ParseError.index` (§5).
  *
- * Syntax, normalization and model refusals become `ParseError`. Runtime or
- * resource failures propagate unchanged, as on the caller-initialized entry;
- * a failed artifact is never retried through a handwritten grammar.
+ * Syntax, normalization and model refusals become `ParseError`. Declared WASM
+ * resource refusals also become `ParseError`, retaining the original error as
+ * their cause. Unrelated engine failures propagate unchanged; the initialized
+ * entry preserves resource errors themselves. An artifact failure is never
+ * retried through a handwritten grammar.
  * `Math.parse` validates parse OPTIONS first, from its own
  * body (`math.rb:33-38`), before `parse_formula` ever runs — outside that
  * `begin`/`rescue StandardError` — so an unknown option key or an unsupported
@@ -42,10 +44,16 @@
  * unwrapped, never a `ParseError`. See the shared consumer’s `validateOptions`.
  */
 
+import type { FormulaNode } from "../../core/index";
+import { withStageResourceGuard } from "../../pegkit/stage-captures";
+import type { HtmlParseOptions } from "./consumer";
 import { createHtmlParser } from "./parsanol";
 import { htmlRuntime } from "./stage";
 
 export type { HtmlParseOptions } from "./consumer";
 
 /** The initialized consumer owns preprocessing, source maps and model mapping. */
-export const parseHtml = createHtmlParser(htmlRuntime);
+const parser = createHtmlParser(htmlRuntime);
+export function parseHtml(input: string, options?: HtmlParseOptions | null): FormulaNode {
+  return withStageResourceGuard(input, "html", () => parser(input, options));
+}

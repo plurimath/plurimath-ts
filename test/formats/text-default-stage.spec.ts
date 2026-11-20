@@ -160,12 +160,18 @@ describe.each([
     expect(new Set(call.mock.contexts).size).toBe(3);
     if (config.name === "unicode") expect(call).toHaveBeenCalledWith("1.5", "parslet", "deepest");
   });
-  it("propagates runtime failures without a second parser", () => {
+  it("keeps the default typed refusal and raw-tree resource identity without a second parser", () => {
     const failure = new CallDepthLimitExceeded(1025, 1024);
     config.spy().mockImplementation(() => {
       throw failure;
     });
-    expect(() => config.parser("x")).toThrow(failure);
+    try {
+      config.parser("x");
+      expect.unreachable("expected a resource refusal");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ParseError);
+      expect((error as Error).cause).toBe(failure);
+    }
     expect(() => config.tree("x")).toThrow(failure);
   });
   it("maps stage UTF-8 syntax offsets onto the caller's UTF-16 input", () => {

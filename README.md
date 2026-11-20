@@ -32,6 +32,9 @@ The current source and package entries provide:
 
 - Parsers exist for all six formats, exposed on their subpaths and through
   the root `parse` function and compat constructor.
+- Default HTML parsing uses the checked Ruby-derived PARG artifacts on the
+  Parsanol runtime, with one lazy runtime per decimal marker. Browser callers
+  can supply an initialized runtime through `./html/parsanol`.
 - Renderers exist for all six output formats: AsciiMath, LaTeX, MathML, HTML,
   UnicodeMath and OMML.
 - Nine package subpaths are built: `./core`, `./asciimath`, `./latex`,

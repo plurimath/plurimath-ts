@@ -1,6 +1,6 @@
 /**
  * The HTML format entry point (ARCHITECTURE.md §4):
- * normalise → grammar → JSON round trip → transform → an immutable
+ * normalise → PARG artifact → JSON round trip → transform → an immutable
  * `FormulaNode`.
  *
  * The pipeline mirrors the gem's, and `html/parser.rb` is 36 lines that differ
@@ -27,49 +27,25 @@
  * `Plurimath::Math.parse_formula` (`math.rb:62-66`) then sets `input_string`
  * to the CALLER's text, not the normalised form.
  *
- * Failure positions: `ParseFailed.index` is an offset into the NORMALISED
- * text, and a replaced entity almost never keeps its length, so every position
- * is mapped back through the `SourceMap` before it reaches a caller as
+ * Failure positions: the PARG runtime reports UTF-8 byte offsets into NORMALISED
+ * text. The initialized consumer converts them to UTF-16 and maps each position
+ * back through the `SourceMap` before it reaches a caller as
  * `ParseError.index` (§5).
  *
- * The gem lets `Parslet::ParseFailed` escape uncaught — there is no `rescue`
- * anywhere under `lib/plurimath/html/` — and `Plurimath::Math.parse` turns it,
- * and every other `StandardError`, into a `ParseError` at the public boundary
- * (`math.rb:45-49`). That is the boundary `normalize`, the grammar and the
- * transform stand at, so a refusal from ANY of those three is a `ParseError`
- * and nothing else escapes from them. It is NOT the boundary the function as
- * a whole stands at: `Math.parse` validates parse OPTIONS first, from its own
+ * Syntax, normalization and model refusals become `ParseError`. Runtime or
+ * resource failures propagate unchanged, as on the caller-initialized entry;
+ * a failed artifact is never retried through a handwritten grammar.
+ * `Math.parse` validates parse OPTIONS first, from its own
  * body (`math.rb:33-38`), before `parse_formula` ever runs — outside that
  * `begin`/`rescue StandardError` — so an unknown option key or an unsupported
  * `locale` value raises `ParseOptionError` or `UnsupportedLocaleError`
  * unwrapped, never a `ParseError`. See the shared consumer’s `validateOptions`.
  */
 
-import { type FormulaNode, ParseError } from "../../core/index";
-import { ParseFailed, type ParseValue, type SourceMap } from "../../pegkit/index";
-import { type HtmlParseOptions, normalize, transformHtmlTree, validateOptions } from "./consumer";
-import { htmlGrammar } from "./grammar";
+import { createHtmlParser } from "./parsanol";
+import { htmlRuntime } from "./stage";
 
 export type { HtmlParseOptions } from "./consumer";
 
-export function parseHtml(input: string, options?: HtmlParseOptions | null): FormulaNode {
-  validateOptions(options);
-  const { text, map } = normalize(input);
-  return transformHtmlTree(parseNormalized(input, text, map, options), input);
-}
-
-function parseNormalized(
-  input: string,
-  text: string,
-  map: SourceMap,
-  options?: HtmlParseOptions | null,
-): ParseValue {
-  try {
-    return htmlGrammar(options ?? undefined).root.parse(text);
-  } catch (error) {
-    if (error instanceof ParseFailed) {
-      throw new ParseError(error.message, input, "html", map.toOriginal(error.index));
-    }
-    throw error;
-  }
-}
+/** The initialized consumer owns preprocessing, source maps and model mapping. */
+export const parseHtml = createHtmlParser(htmlRuntime);

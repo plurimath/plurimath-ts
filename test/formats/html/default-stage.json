@@ -1,0 +1,1805 @@
+{
+  "oracle": {
+    "commit": "b0a695cbc5ce31fe8d0d3934d0c93428bb6d200e",
+    "ruby": "4.0.1",
+    "lockSha256": "f96dc6cd975477125156e67e1e9254993dc0dd6dc4ce517dd60b42d711d2a906",
+    "xmlEngine": "Plurimath::XmlEngine::OxEngine",
+    "gems": {
+      "amath": "0.2.1",
+      "ansi": "1.6.0",
+      "asciiunits": "0.1.6",
+      "ast": "2.4.3",
+      "base64": "0.3.0",
+      "bcp47_spec": "0.2.1",
+      "bigdecimal": "4.1.3",
+      "bundler": "4.0.3",
+      "canon": "0.3.127",
+      "concurrent-ruby": "1.3.8",
+      "csv": "3.3.7",
+      "diff-lcs": "1.6.2",
+      "ebnf": "2.6.0",
+      "erb": "6.0.7",
+      "ffi": "1.17.4",
+      "fiddle": "1.1.8",
+      "fuzzy_match": "2.1.0",
+      "htmlentities": "4.4.2",
+      "io-console": "0.9.5",
+      "irb": "1.19.0",
+      "json": "3.1.0",
+      "language_server-protocol": "3.17.0.6",
+      "lasem": "0.1.0",
+      "latexmath": "1.0.0",
+      "leptris": "1.9.429.0",
+      "link_header": "0.0.8",
+      "lint_roller": "1.1.0",
+      "liquid": "5.14.0",
+      "logger": "1.7.0",
+      "lutaml-model": "0.8.176",
+      "matrix": "0.4.3",
+      "memo_wise": "1.13.0",
+      "mml": "2.4.8",
+      "moxml": "0.6.16",
+      "nokogiri": "1.19.7",
+      "oga": "3.5",
+      "omml": "0.2.12",
+      "opal": "1.8.3",
+      "opal-rspec": "1.1.0.alpha3",
+      "ostruct": "0.6.3",
+      "ox": "2.14.29",
+      "paint": "2.3.0",
+      "parallel": "2.3.0",
+      "parsanol": "1.5.9",
+      "parser": "3.3.14.0",
+      "parslet": "2.0.0",
+      "plurimath": "0.11.20",
+      "pp": "0.6.4",
+      "prettyprint": "0.2.1",
+      "prism": "2.1.0",
+      "racc": "1.8.1",
+      "rainbow": "3.1.1",
+      "rake": "12.3.3",
+      "rbs": "4.2.0",
+      "rdf": "3.3.1",
+      "rdf-turtle": "3.3.0",
+      "rdoc": "8.1.0",
+      "regexp_parser": "2.13.4",
+      "reline": "0.7.0",
+      "rspec": "3.13.2",
+      "rspec-core": "3.13.7",
+      "rspec-expectations": "3.13.6",
+      "rspec-mocks": "3.13.9",
+      "rspec-support": "3.13.8",
+      "rubocop": "1.92.3",
+      "rubocop-ast": "1.53.0",
+      "rubocop-performance": "1.27.0",
+      "rubocop-rake": "0.7.1",
+      "rubocop-rspec": "3.10.2",
+      "ruby-ll": "2.2.0",
+      "ruby-progressbar": "1.13.0",
+      "rubyzip": "3.7.0",
+      "scanf": "1.0.0",
+      "simplecov": "1.3.2",
+      "strscan": "3.1.8",
+      "sxp": "2.0.0",
+      "table_tennis": "0.0.7",
+      "thor": "1.5.0",
+      "tsort": "0.2.0",
+      "umath": "0.2.4",
+      "unicode-display_width": "3.3.0",
+      "unicode-emoji": "4.3.0",
+      "unicode-name": "1.15.1",
+      "unicode-types": "1.12.0",
+      "unitsdb": "2.2.15",
+      "unitsml": "0.6.14",
+      "yeptris": "0.6.75.0"
+    }
+  },
+  "generatorSha256": "2b3fa7cb02b71b5d4fe3d4c989f93caaa553cb152e54836628d798762b893bac",
+  "serializerSha256": "38f4873f087ac47bee7ac59772a4e30f22590a2bed26bd3ded0149510c5b398b",
+  "cases": [
+    {
+      "id": "symbol",
+      "input": "x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "\"x\""
+        },
+        "latex": {
+          "bytes": "\\text{x}"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mtext>x</mtext>\n</math>\n"
+        },
+        "html": {
+          "bytes": "x"
+        },
+        "unicode": {
+          "bytes": "\"x\""
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "integer",
+      "input": "1234",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1234",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Number",
+              "fields": {
+                "base": null,
+                "mini_sub_sized": false,
+                "mini_sup_sized": false,
+                "value": "1234"
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "1234"
+        },
+        "latex": {
+          "bytes": "1234"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mn>1234</mn>\n</math>\n"
+        },
+        "html": {
+          "bytes": "1234"
+        },
+        "unicode": {
+          "bytes": "1234"
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:t>1234</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "dot-decimal",
+      "input": "1.5",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1.5",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Number",
+              "fields": {
+                "base": null,
+                "mini_sub_sized": false,
+                "mini_sup_sized": false,
+                "value": "1.5"
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "1.5"
+        },
+        "latex": {
+          "bytes": "1.5"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mn>1.5</mn>\n</math>\n"
+        },
+        "html": {
+          "bytes": "1.5"
+        },
+        "unicode": {
+          "bytes": "1.5"
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:t>1.5</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "comma-decimal-de",
+      "input": "1,5",
+      "locale": "de",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1,5",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Number",
+              "fields": {
+                "base": null,
+                "mini_sub_sized": false,
+                "mini_sup_sized": false,
+                "value": "1,5"
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "1,5"
+        },
+        "latex": {
+          "bytes": "1,5"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mn>1,5</mn>\n</math>\n"
+        },
+        "html": {
+          "bytes": "1,5"
+        },
+        "unicode": {
+          "bytes": "1,5"
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:t>1,5</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "comma-decimal-fr",
+      "input": "1,5",
+      "locale": "fr",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1,5",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Number",
+              "fields": {
+                "base": null,
+                "mini_sub_sized": false,
+                "mini_sup_sized": false,
+                "value": "1,5"
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "1,5"
+        },
+        "latex": {
+          "bytes": "1,5"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mn>1,5</mn>\n</math>\n"
+        },
+        "html": {
+          "bytes": "1,5"
+        },
+        "unicode": {
+          "bytes": "1,5"
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:t>1,5</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "arabic-decimal",
+      "input": "1٫5",
+      "locale": "ar",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1٫5",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Number",
+              "fields": {
+                "base": null,
+                "mini_sub_sized": false,
+                "mini_sup_sized": false,
+                "value": "1٫5"
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "1٫5"
+        },
+        "latex": {
+          "bytes": "1٫5"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mn>1٫5</mn>\n</math>\n"
+        },
+        "html": {
+          "bytes": "1٫5"
+        },
+        "unicode": {
+          "bytes": "1٫5"
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:t>1٫5</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "greek",
+      "input": "α+x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "α+x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Alpha",
+              "fields": {
+                "value": null
+              }
+            },
+            {
+              "class": "Math::Symbols::Plus",
+              "fields": {
+                "value": null
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "alpha + \"x\""
+        },
+        "latex": {
+          "bytes": "\\alpha + \\text{x}"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mi>&#x3b1;</mi>\n  <mo>+</mo>\n  <mtext>x</mtext>\n</math>\n"
+        },
+        "html": {
+          "bytes": "&#x3b1; &#x2b; x"
+        },
+        "unicode": {
+          "bytes": "α + \"x\""
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:t>&#x3b1;</m:t>\n    </m:r>\n    <m:r>\n      <m:t>+</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "supplementary",
+      "input": "😀x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "😀x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "&#x1f600;"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "&#x1f600; \"x\""
+        },
+        "latex": {
+          "bytes": "&#x1f600; \\text{x}"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mi>&#x1f600;</mi>\n  <mtext>x</mtext>\n</math>\n"
+        },
+        "html": {
+          "bytes": "&#x1f600; x"
+        },
+        "unicode": {
+          "bytes": "😀 \"x\""
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:t>&#x1f600;</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "encoded-plus",
+      "input": "x&#x2b;y",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "x&#x2b;y",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Symbols::Plus",
+              "fields": {
+                "value": null
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "y"
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "\"x\" + \"y\""
+        },
+        "latex": {
+          "bytes": "\\text{x} + \\text{y}"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mtext>x</mtext>\n  <mo>+</mo>\n  <mtext>y</mtext>\n</math>\n"
+        },
+        "html": {
+          "bytes": "x &#x2b; y"
+        },
+        "unicode": {
+          "bytes": "\"x\" + \"y\""
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:t>+</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>y</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "superscript",
+      "input": "x<sup>2</sup>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "x<sup>2</sup>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Power",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Function::Text",
+                  "fields": {
+                    "lang": null,
+                    "parameter_one": "x"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "2"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "\"x\"^(2)"
+        },
+        "latex": {
+          "bytes": "\\text{x}^{2}"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <msup>\n    <mtext>x</mtext>\n    <mn>2</mn>\n  </msup>\n</math>\n"
+        },
+        "html": {
+          "bytes": "<i>x</i><sup>2</sup>"
+        },
+        "unicode": {
+          "bytes": "\"x\"^(2)"
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:sSup>\n      <m:sSupPr>\n        <m:ctrlPr>\n          <w:rPr>\n            <w:rFonts w:ascii=\"Cambria Math\" w:hAnsi=\"Cambria Math\"/>\n            <w:i/>\n          </w:rPr>\n        </m:ctrlPr>\n      </m:sSupPr>\n      <m:e>\n        <m:r>\n          <m:rPr>\n            <m:sty m:val=\"p\"/>\n          </m:rPr>\n          <m:t>x</m:t>\n        </m:r>\n      </m:e>\n      <m:sup>\n        <m:r>\n          <m:t>2</m:t>\n        </m:r>\n      </m:sup>\n    </m:sSup>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "subscript",
+      "input": "x<sub>1</sub>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "x<sub>1</sub>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Base",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Function::Text",
+                  "fields": {
+                    "lang": null,
+                    "parameter_one": "x"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "\"x\"_(1)"
+        },
+        "latex": {
+          "bytes": "\\text{x}_{1}"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <msub>\n    <mtext>x</mtext>\n    <mn>1</mn>\n  </msub>\n</math>\n"
+        },
+        "html": {
+          "bytes": "<i>x</i><sub>1</sub>"
+        },
+        "unicode": {
+          "bytes": "\"x\"_(1)"
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:sSub>\n      <m:sSubPr>\n        <m:ctrlPr>\n          <w:rPr>\n            <w:rFonts w:ascii=\"Cambria Math\" w:hAnsi=\"Cambria Math\"/>\n            <w:i/>\n          </w:rPr>\n        </m:ctrlPr>\n      </m:sSubPr>\n      <m:e>\n        <m:r>\n          <m:rPr>\n            <m:sty m:val=\"p\"/>\n          </m:rPr>\n          <m:t>x</m:t>\n        </m:r>\n      </m:e>\n      <m:sub>\n        <m:r>\n          <m:t>1</m:t>\n        </m:r>\n      </m:sub>\n    </m:sSub>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "both-scripts",
+      "input": "x<sub>1</sub><sup>2</sup>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "x<sub>1</sub><sup>2</sup>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::PowerBase",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Function::Text",
+                  "fields": {
+                    "lang": null,
+                    "parameter_one": "x"
+                  }
+                },
+                "parameter_three": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "2"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "\"x\"_(1)^(2)"
+        },
+        "latex": {
+          "bytes": "\\text{x}_{1}^{2}"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <msubsup>\n    <mtext>x</mtext>\n    <mn>1</mn>\n    <mn>2</mn>\n  </msubsup>\n</math>\n"
+        },
+        "html": {
+          "bytes": "<i>x</i><sub>1</sub><sup>2</sup>"
+        },
+        "unicode": {
+          "bytes": "\"x\"_(1)^(2)"
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:sSubSup>\n      <m:sSubSupPr>\n        <m:ctrlPr>\n          <w:rPr>\n            <w:rFonts w:ascii=\"Cambria Math\" w:hAnsi=\"Cambria Math\"/>\n            <w:i/>\n          </w:rPr>\n        </m:ctrlPr>\n      </m:sSubSupPr>\n      <m:e>\n        <m:r>\n          <m:rPr>\n            <m:sty m:val=\"p\"/>\n          </m:rPr>\n          <m:t>x</m:t>\n        </m:r>\n      </m:e>\n      <m:sub>\n        <m:r>\n          <m:t>1</m:t>\n        </m:r>\n      </m:sub>\n      <m:sup>\n        <m:r>\n          <m:t>2</m:t>\n        </m:r>\n      </m:sup>\n    </m:sSubSup>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "italic",
+      "input": "<i>x</i>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<i>x</i>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "\"x\""
+        },
+        "latex": {
+          "bytes": "\\text{x}"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mtext>x</mtext>\n</math>\n"
+        },
+        "html": {
+          "bytes": "x"
+        },
+        "unicode": {
+          "bytes": "\"x\""
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "table",
+      "input": "<table><tr><td>a</td><td>b</td></tr></table>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<table><tr><td>a</td><td>b</td></tr></table>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Table",
+              "fields": {
+                "close_paren": null,
+                "open_paren": null,
+                "options": {},
+                "value": [
+                  {
+                    "class": "Math::Function::Tr",
+                    "fields": {
+                      "parameter_one": [
+                        {
+                          "class": "Math::Function::Td",
+                          "fields": {
+                            "parameter_one": [
+                              {
+                                "class": "Math::Function::Text",
+                                "fields": {
+                                  "lang": null,
+                                  "parameter_one": "a"
+                                }
+                              }
+                            ],
+                            "parameter_two": null
+                          }
+                        },
+                        {
+                          "class": "Math::Function::Td",
+                          "fields": {
+                            "parameter_one": [
+                              {
+                                "class": "Math::Function::Text",
+                                "fields": {
+                                  "lang": null,
+                                  "parameter_one": "b"
+                                }
+                              }
+                            ],
+                            "parameter_two": null
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "[[\"a\", \"b\"]]"
+        },
+        "latex": {
+          "bytes": "\\left .\\begin{matrix}\\text{a} & \\text{b}\\end{matrix}\\right ."
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mtable>\n    <mtr>\n      <mtd>\n        <mtext>a</mtext>\n      </mtd>\n      <mtd>\n        <mtext>b</mtext>\n      </mtd>\n    </mtr>\n  </mtable>\n</math>\n"
+        },
+        "html": {
+          "bytes": "<table><tr><td>a</td><td>b</td></tr></table>"
+        },
+        "unicode": {
+          "bytes": "■(\"a\"&\"b\")"
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:m>\n      <m:mPr>\n        <m:mcs>\n          <m:mc>\n            <m:mcPr>\n              <m:count m:val=\"2\"/>\n              <m:mcJc m:val=\"center\"/>\n            </m:mcPr>\n          </m:mc>\n        </m:mcs>\n        <m:ctrlPr>\n          <w:rPr>\n            <w:rFonts w:ascii=\"Cambria Math\" w:hAnsi=\"Cambria Math\"/>\n            <w:i/>\n          </w:rPr>\n        </m:ctrlPr>\n      </m:mPr>\n      <m:mr>\n        <m:e>\n          <m:r>\n            <m:rPr>\n              <m:sty m:val=\"p\"/>\n            </m:rPr>\n            <m:t>a</m:t>\n          </m:r>\n        </m:e>\n        <m:e>\n          <m:r>\n            <m:rPr>\n              <m:sty m:val=\"p\"/>\n            </m:rPr>\n            <m:t>b</m:t>\n          </m:r>\n        </m:e>\n      </m:mr>\n    </m:m>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "newline",
+      "input": "x\n",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "x\n",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "&#xa;"
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "\"x\" &#xa;"
+        },
+        "latex": {
+          "bytes": "\\text{x} &#xa;"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mtext>x</mtext>\n  <mi>&#xa;</mi>\n</math>\n"
+        },
+        "html": {
+          "bytes": "x &#xa;"
+        },
+        "unicode": {
+          "bytes": "\"x\" \n"
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:t>&#xa;</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "parentheses",
+      "input": "(x+y)",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "(x+y)",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Paren::Lround",
+              "fields": {
+                "value": null
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Symbols::Plus",
+              "fields": {
+                "value": null
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "y"
+              }
+            },
+            {
+              "class": "Math::Symbols::Paren::Rround",
+              "fields": {
+                "value": null
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "( \"x\" + \"y\" )"
+        },
+        "latex": {
+          "bytes": "( \\text{x} + \\text{y} )"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mo>(</mo>\n  <mtext>x</mtext>\n  <mo>+</mo>\n  <mtext>y</mtext>\n  <mo>)</mo>\n</math>\n"
+        },
+        "html": {
+          "bytes": "( x &#x2b; y )"
+        },
+        "unicode": {
+          "bytes": "( \"x\" + \"y\" )"
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:t>(</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:t>+</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>y</m:t>\n    </m:r>\n    <m:r>\n      <m:t>)</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "absolute",
+      "input": "abs(3)",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "abs(3)",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Abs",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Paren::Lround",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Number",
+                        "fields": {
+                          "base": null,
+                          "mini_sub_sized": false,
+                          "mini_sup_sized": false,
+                          "value": "3"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Paren::Rround",
+                        "fields": {
+                          "value": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "abs(( 3 ))"
+        },
+        "latex": {
+          "bytes": "\\abs{( 3 )}"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mrow>\n    <mo>|</mo>\n    <mrow>\n      <mo>(</mo>\n      <mn>3</mn>\n      <mo>)</mo>\n    </mrow>\n    <mo>|</mo>\n  </mrow>\n</math>\n"
+        },
+        "html": {
+          "bytes": "<i>abs</i><i>( 3 )</i>"
+        },
+        "unicode": {
+          "bytes": "⒜(( 3 ))"
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:d>\n      <m:dPr>\n        <w:rPr>\n          <w:rFonts w:ascii=\"Cambria Math\" w:hAnsi=\"Cambria Math\"/>\n        </w:rPr>\n        <m:begChr m:val=\"|\"/>\n        <m:endChr m:val=\"|\"/>\n        <m:sepChr m:val=\"\"/>\n        <m:grow/>\n      </m:dPr>\n      <m:e>\n        <m:r>\n          <m:t>(</m:t>\n        </m:r>\n        <m:r>\n          <m:t>3</m:t>\n        </m:r>\n        <m:r>\n          <m:t>)</m:t>\n        </m:r>\n      </m:e>\n    </m:d>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "fraction",
+      "input": "a/b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "a/b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "a"
+              }
+            },
+            {
+              "class": "Math::Symbols::Slash",
+              "fields": {
+                "value": null
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "b"
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "\"a\" // \"b\""
+        },
+        "latex": {
+          "bytes": "\\text{a} / \\text{b}"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mtext>a</mtext>\n  <mo>/</mo>\n  <mtext>b</mtext>\n</math>\n"
+        },
+        "html": {
+          "bytes": "a / b"
+        },
+        "unicode": {
+          "bytes": "\"a\"/\"b\""
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>a</m:t>\n    </m:r>\n    <m:r>\n      <m:t>/</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>b</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "lone-tag",
+      "input": "<",
+      "raises": "Plurimath::Math::ParseError"
+    },
+    {
+      "id": "unclosed-sup",
+      "input": "x<sup>",
+      "raises": "Plurimath::Math::ParseError"
+    },
+    {
+      "id": "mismatched-tag",
+      "input": "<i>x</b>",
+      "raises": "Plurimath::Math::ParseError"
+    },
+    {
+      "id": "invalid-entity",
+      "input": "&#55296;",
+      "raises": "Plurimath::Math::ParseError"
+    },
+    {
+      "id": "nesting-limit",
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "x"
+              }
+            }
+          ]
+        }
+      },
+      "rendered": {
+        "asciimath": {
+          "bytes": "\"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\""
+        },
+        "latex": {
+          "bytes": "\\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x} \\text{x}"
+        },
+        "mathml": {
+          "bytes": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\" displaystyle=\"true\">\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n  <mtext>x</mtext>\n</math>\n"
+        },
+        "html": {
+          "bytes": "x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x x"
+        },
+        "unicode": {
+          "bytes": "\"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\" \"x\""
+        },
+        "omml": {
+          "bytes": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>x</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
+        }
+      }
+    },
+    {
+      "id": "nesting-over-limit",
+      "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "raises": "Plurimath::Math::ParseError"
+    }
+  ]
+}

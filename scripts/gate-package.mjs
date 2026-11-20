@@ -288,7 +288,7 @@ const FORBIDDEN = {
   // HTML parses as well as renders, so pegkit is expected here; `xml` still
   // is not, because the HTML renderer builds its markup as strings rather
   // than through the XML layer.
-  "./html": [...forbidOtherFormats("html"), /xml\//, LOCALE_GROUPS],
+  "./html": [...forbidOtherFormats("html"), /xml\//, LOCALE_GROUPS, /formats\/html\/grammar\.ts$/],
   "./html/parsanol": [
     ...forbidOtherFormats("html"),
     /xml\//,
@@ -320,7 +320,7 @@ const REQUIRED = {
   "./asciimath/amath": [LOCALE_DECIMALS, /formats\/asciimath\/amath\.ts$/],
   "./latex/latexmath": [LOCALE_DECIMALS, /formats\/latex\/latexmath\.ts$/],
   "./unicodemath/umath": [LOCALE_DECIMALS, /formats\/unicodemath\/umath\.ts$/],
-  "./html": [LOCALE_DECIMALS],
+  "./html": [LOCALE_DECIMALS, /formats\/html\/stage\.ts$/],
   "./html/parsanol": [LOCALE_DECIMALS, /formats\/html\/parsanol\.ts$/],
   "./latex": [LOCALE_DECIMALS],
   "./unicodemath": [LOCALE_DECIMALS],

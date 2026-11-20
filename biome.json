@@ -35,6 +35,7 @@
       "!assets/html/dot.json",
       "!assets/html/comma.json",
       "!assets/html/arabic.json",
+      "!test/formats/html/default-stage.json",
       "!test/formats/html/initialized-source.json"
     ]
   },

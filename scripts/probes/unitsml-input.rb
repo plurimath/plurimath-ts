@@ -77,7 +77,7 @@ module UnitsmlInputReference
     payload, provenance = generate(options.fetch(:oracle))
     path = options.fetch(:out)
     if options[:check]
-      raise "UnitsML input bytes differ from Ruby" unless File.binread(path) == payload
+      raise "UnitsML input bytes differ from Ruby" unless File.binread(path) == payload.b
     else
       FileUtils.mkdir_p(File.dirname(path))
       File.binwrite(path, payload)

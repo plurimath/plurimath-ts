@@ -18,17 +18,13 @@
  * It is METHOD-exact, not OBJECT-exact, and deliberately so. The published
  * class exposes a writable `data` holding an Opal `ParserResult`, a runtime
  * value this port cannot reproduce. `data` here is a `readonly FormulaNode`:
- * same property name, this port's model behind it. A consumer that READS it
+ * same property name, this port's model behind it. Standalone `unitsml` is an
+ * additive input since Ruby 142bc513 (plurimath#539). A consumer that READS it
  * gets something meaningful; one that WRITES it was broken by either choice.
  */
 
 import { describeThrown } from "../core/errors";
-import {
-  type FormulaNode,
-  InvalidTypeError,
-  ParseError,
-  UnsupportedFormatError,
-} from "../core/index";
+import { type FormulaNode, InvalidTypeError, UnsupportedFormatError } from "../core/index";
 import { parseAsciimath, toAsciimath } from "../formats/asciimath/index";
 import { parseHtml, toHtml } from "../formats/html/index";
 import { parseLatex, toLatex } from "../formats/latex/index";
@@ -37,6 +33,7 @@ import { parseMathml } from "../formats/mathml/parser";
 import { parseOmml } from "../formats/omml/parser";
 import { toOmml } from "../formats/omml/renderer";
 import { parseUnicodemath, toUnicodemath } from "../formats/unicodemath/index";
+import { parseUnitsml } from "../unitsml/input";
 import { buildTreeDump, type DisplayFormat } from "./to-display";
 
 /**
@@ -47,7 +44,7 @@ import { buildTreeDump, type DisplayFormat } from "./to-display";
  * declaration says `mahtml` where this says `unicode`; see the note above for
  * why this port follows source head instead.
  */
-export type Format = "asciimath" | "latex" | "mathml" | "html" | "unicode" | "omml";
+export type Format = "asciimath" | "latex" | "mathml" | "html" | "unicode" | "omml" | "unitsml";
 
 /** Every format the constructor names, in the union's own order. */
 export const FORMATS: readonly Format[] = [
@@ -57,6 +54,7 @@ export const FORMATS: readonly Format[] = [
   "html",
   "unicode",
   "omml",
+  "unitsml",
 ] as const;
 
 /**
@@ -100,6 +98,7 @@ const PARSERS: Partial<Record<Format, (input: string) => FormulaNode>> = {
   mathml: parseMathml,
   omml: parseOmml,
   unicode: parseUnicodemath,
+  unitsml: parseUnitsml,
 };
 
 /**
@@ -115,9 +114,9 @@ const DISPLAY_TYPES: readonly string[] = ["omml", "latex", "mathml", "asciimath"
  * The gem's `Math::VALID_TYPES` keys (`math.rb:16-24`), in its order: the
  * type tokens `Math.parse` accepts, which plurimath-js's constructor reaches.
  * A token outside it raises `InvalidTypeError`, measured on the oracle for
- * `"foo"`, `"unicodemath"` and `"HTML"` (the check is case-sensitive). A token
- * The recognized `unitsml` token raises ParseError: the reference standalone
- * result cannot record input_string. Inline UnitsML uses the AsciiMath parser.
+ * `"foo"`, `"unicodemath"` and `"HTML"` (the check is case-sensitive).
+ * Standalone UnitsML follows the Formula wrapper introduced in Ruby
+ * 142bc513; inline UnitsML continues to use the AsciiMath parser.
  */
 const PARSE_TYPES: readonly string[] = [
   "omml",
@@ -156,14 +155,6 @@ export default class Plurimath {
         typeof format === "string" ? format : describeThrown(format),
         PARSE_TYPES,
         `\`type\` must be one of: \`${PARSE_TYPES.join("`, `")}\``,
-      );
-    }
-    if ((format as string) === "unitsml") {
-      throw new ParseError(
-        "standalone unitsml parsing cannot retain the input string",
-        data,
-        "unitsml",
-        0,
       );
     }
     const parse = PARSERS[format];

@@ -7,7 +7,8 @@
  * slim, and a consumer who wants slim imports a subpath instead.
  *
  * The constructor reads AsciiMath, LaTeX, HTML, UnicodeMath (named
- * `unicode`), MathML and OMML. Per-format subpaths expose their own functions.
+ * `unicode`), MathML, OMML and standalone UnitsML. Per-format subpaths expose
+ * their own functions.
  */
 
 export { default as Plurimath, default, FORMATS, type Format } from "./compat/index";

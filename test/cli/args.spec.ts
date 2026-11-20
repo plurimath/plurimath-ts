@@ -58,12 +58,12 @@ describe("parseArgs", () => {
   });
 
   it("rejects an unknown input format", () => {
-    const result = parseArgs(["convert", "--from", "unitsml", "--to", "latex"]);
+    const result = parseArgs(["convert", "--from", "bogus", "--to", "latex"]);
     expect(result.kind).toBe("error");
-    expect(result.kind === "error" && result.message).toMatch(/Unknown input format "unitsml"/);
+    expect(result.kind === "error" && result.message).toMatch(/Unknown input format "bogus"/);
   });
 
-  it.each(["mathml", "omml"])("accepts %s as an input format", (from) => {
+  it.each(["mathml", "omml", "unitsml"])("accepts %s as an input format", (from) => {
     expect(parseArgs(["convert", `--from=${from}`, "--to", "latex"])).toEqual({
       kind: "convert",
       args: { from, to: "latex", file: undefined, options: {} },

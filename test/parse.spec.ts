@@ -91,7 +91,7 @@ describe("root parse", () => {
     },
   );
 
-  it("preserves standalone UnitsML's reference parse failure", () => {
+  it("rejects an invalid standalone UnitsML expression", () => {
     expect(() => parse("x", "unitsml" as Format)).toThrow(ParseError);
   });
 });
@@ -109,7 +109,8 @@ function optionTypes(): void {
   parse(OMML, "omml", { onUnsupported: () => {} });
   // @ts-expect-error The root ABI uses unicode, not unicodemath.
   parse("x", "unicodemath");
-  // @ts-expect-error Standalone UnitsML fails at the reference parse boundary and is not a typed input format.
-  parse("x", "unitsml");
+  parse("kg", "unitsml");
+  // @ts-expect-error Standalone UnitsML accepts no locale option.
+  parse("kg", "unitsml", { locale: "de" });
 }
 void optionTypes;

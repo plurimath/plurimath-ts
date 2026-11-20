@@ -119,8 +119,8 @@ describe("the compat class matches the plurimath-js surface", () => {
     expect(formula.data.kind).toBe("formula");
   });
 
-  it("names the six constructor formats the wrapper names", () => {
-    expect(FORMATS).toEqual(["asciimath", "latex", "mathml", "html", "unicode", "omml"]);
+  it("names the wrapper formats plus standalone UnitsML", () => {
+    expect(FORMATS).toEqual(["asciimath", "latex", "mathml", "html", "unicode", "omml", "unitsml"]);
   });
 
   it("uses `unicode`, the gem's spelling, not the published `mahtml` typo", () => {
@@ -130,7 +130,15 @@ describe("the compat class matches the plurimath-js surface", () => {
   });
 });
 
-const PARSEABLE: readonly Format[] = ["asciimath", "latex", "html", "mathml", "omml", "unicode"];
+const PARSEABLE: readonly Format[] = [
+  "asciimath",
+  "latex",
+  "html",
+  "mathml",
+  "omml",
+  "unicode",
+  "unitsml",
+];
 
 /**
  * The same formula written in each door's own notation.
@@ -192,7 +200,7 @@ describe("the constructor's staged contract", () => {
     expect(equals(formula.data, parseUnicodemath(GEM_OUTPUT.toUnicodemath))).toBe(true);
   });
 
-  /** All six formats parse today; asserted so a format added without a parser shows here. */
+  /** All declared formats have parsers; asserted so a format added without a parser shows here. */
   it("has a parser for every format", () => {
     expect(FORMATS.filter((f) => !PARSEABLE.includes(f))).toEqual([]);
   });
@@ -222,7 +230,7 @@ describe("the constructor's staged contract", () => {
     expect(() => new Plurimath(INPUT, null as unknown as Format)).toThrow(InvalidTypeError);
   });
 
-  it("preserves the standalone UnitsML source-assignment parse failure", () => {
+  it("rejects invalid standalone UnitsML syntax", () => {
     expect(() => new Plurimath(INPUT, "unitsml" as Format)).toThrow(ParseError);
   });
 

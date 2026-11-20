@@ -76,7 +76,7 @@ const byName = (name: string): DeclaredMember => {
 const CONTROL = `import { L as FormulaNode } from "./index-HASH.js";
 //#region src/compat/index.d.ts
 /** The input formats the published constructor accepts. */
-type Format = "asciimath" | "latex" | "mathml" | "html" | "unicode" | "omml";
+type Format = "asciimath" | "latex" | "mathml" | "html" | "unicode" | "omml" | "unitsml";
 declare const FORMATS: readonly Format[];
 declare class Plurimath {
   /** The parsed formula. */
@@ -168,7 +168,7 @@ describe("compat declaration fixture", () => {
       rest: false,
       type: {
         alias: "Format",
-        literals: ["asciimath", "latex", "mathml", "html", "unicode", "omml"],
+        literals: ["asciimath", "latex", "mathml", "html", "unicode", "omml", "unitsml"],
       },
     });
 
@@ -253,7 +253,7 @@ describe("compat declaration check", () => {
     [
       "the published mahtml spelling",
       mutate('"unicode"', '"mahtml"'),
-      'constructor.parameters[1].type.literals: expected ["asciimath","latex","mathml","html","unicode","omml"], got ["asciimath","latex","mathml","html","mahtml","omml"]',
+      'constructor.parameters[1].type.literals: expected ["asciimath","latex","mathml","html","unicode","omml","unitsml"], got ["asciimath","latex","mathml","html","mahtml","omml","unitsml"]',
     ],
     [
       "a reordered member",

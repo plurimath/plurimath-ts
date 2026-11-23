@@ -27,6 +27,7 @@ import { tmpdir } from "node:os";
 import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { FACADE_COUNTS, loadFacadeCorpus, replayFacade } from "./facade-corpus.mjs";
+import { replayTextParseParity } from "./text-parse-parity.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -51,6 +52,9 @@ if (pin.status !== "pinned") {
 }
 
 const data = loadFacadeCorpus(root);
+const textParseFixture = JSON.parse(
+  readFileSync(join(root, "test/fixtures/facade/text-parse-parity.json"), "utf8"),
+);
 const scratch = mkdtempSync(join(tmpdir(), "plurimath-facade-packed-"));
 const dataFile = join(scratch, "facade-corpus.json");
 writeFileSync(dataFile, JSON.stringify(data));
@@ -105,9 +109,11 @@ const nodeRun = (moduleMode) => {
   const body = `${
     moduleMode === "esm"
       ? `import * as api from "@plurimath/plurimath-ts/facade/wasm";
+import * as current from "@plurimath/plurimath-ts";
 import { readFileSync } from "node:fs"; import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);`
       : `const api = require("@plurimath/plurimath-ts/facade/wasm");
+const current = require("@plurimath/plurimath-ts");
 const { readFileSync } = require("node:fs");`
   }
 ${replaySource}
@@ -115,13 +121,14 @@ ${replaySource}
   const asset = readFileSync(require.resolve("@plurimath/plurimath-ts/facade/plurimath_facade.wasm"));
   const data = JSON.parse(readFileSync(${JSON.stringify(dataFile)}, "utf8"));
   const kernel = await api.initFacadeWasm(asset);
+  const textParseParity = (${replayTextParseParity.toString()})(current, kernel, ${JSON.stringify(textParseFixture)});
   const again = await api.initFacadeWasm(new Uint8Array(asset));
   let mismatch;
   try { await api.initFacadeWasm(asset, { sha256: "0".repeat(64) }); } catch (error) { mismatch = error.code; }
   let fetches = 0;
   globalThis.fetch = () => { fetches++; throw new Error("no I/O after initialization"); };
   const result = await replayFacade(api, kernel, data, ${limitSource});
-  process.stdout.write(JSON.stringify({ ...result, sameKernel: again === kernel, digestMismatch: mismatch, warmedFetches: fetches }));
+  process.stdout.write(JSON.stringify({ ...result, textParseParity, sameKernel: again === kernel, digestMismatch: mismatch, warmedFetches: fetches }));
 })().catch((error) => { console.error(error); process.exitCode = 1; });
 `;
   const file = join(scratch, moduleMode === "esm" ? "replay.mjs" : "replay.cjs");
@@ -307,6 +314,12 @@ for (const r of runs) {
   if (r.asset?.sha256 !== packageProvenance.assetSha256) problems.push(`${label}: asset digest`);
   if ("sameKernel" in r && r.sameKernel !== true)
     problems.push(`${label}: a second initialization made another kernel`);
+  if (
+    label.startsWith("node ") &&
+    JSON.stringify(r.textParseParity) !==
+      JSON.stringify({ rows: 6, comparisons: 18, refusals: 3, calls: 29 })
+  )
+    problems.push(`${label}: missing shared text parse differential results`);
   if (r.digestMismatch !== "AssetDigestMismatch")
     problems.push(`${label}: digest mismatch not refused`);
   if (r.warmedFetches !== 0)
@@ -326,6 +339,7 @@ const summary = runs.map((r) => ({
     ...r.sourceValues,
     mismatches: r.sourceValues.mismatches.length,
   },
+  textParseParity: r.textParseParity,
   checks: r.checks?.filter((x) => x.ok).length,
   accounting: r.accounting,
   publicCalls: r.publicCalls,

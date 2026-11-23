@@ -1,8 +1,9 @@
 /** The Ruby-derived HTML artifacts on the same PARG runtime as AsciiMath. */
-import { PargRuntime } from "parsanol";
+
 import arabic from "../../../assets/html/arabic.json" with { type: "json" };
 import comma from "../../../assets/html/comma.json" with { type: "json" };
 import dot from "../../../assets/html/dot.json" with { type: "json" };
+import { BoundedRuntime } from "../../pegkit/bounded-runtime";
 import type { HtmlPargRuntime } from "./parsanol";
 
 const ARTIFACTS: Readonly<Record<string, unknown>> = { ".": dot, ",": comma, "٫": arabic };
@@ -17,7 +18,9 @@ export function htmlRuntime(decimal: string): HtmlPargRuntime {
       throw new TypeError(`No HTML artifact for decimal marker ${decimal}`);
     // The checked assets use two-space JSON and one final newline. Preserve
     // those bytes, including their provenance, rather than compiling a grammar.
-    runtime = new PargRuntime(`${JSON.stringify(artifact, null, 2)}\n`, "document");
+    // HTML reaches its JSON nesting guard at 100 levels with this budget.
+    // A larger budget lets deep HTML exhaust the native WASM stack first.
+    runtime = new BoundedRuntime(`${JSON.stringify(artifact, null, 2)}\n`, "document", 1536);
     runtimes.set(decimal, runtime);
   }
   return runtime;

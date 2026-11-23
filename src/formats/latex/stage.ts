@@ -4,7 +4,7 @@ import bindings from "@plurimath/latexmath-ts/artifacts/latex.bindings.ts.json" 
 };
 import artifact from "@plurimath/latexmath-ts/artifacts/latex.json" with { type: "json" };
 import { type Decimal, Parser } from "@plurimath/latexmath-ts/browser";
-import { PargRuntime } from "parsanol";
+import { BoundedRuntime } from "../../pegkit/bounded-runtime";
 
 // The pinned stage's grammars/latex.wrappers.json.
 const WRAPPERS: Readonly<Record<string, string>> = Object.freeze({
@@ -28,7 +28,7 @@ const lazyRuntimes = {
     if (runtime === undefined) {
       // The checked stage artifact is compact JSON with a final newline.
       artifactText ??= `${JSON.stringify(artifact)}\n`;
-      runtime = new PargRuntime(artifactText, entry) as unknown as Runtime;
+      runtime = new BoundedRuntime(artifactText, entry) as unknown as Runtime;
       runtimes.set(decimal, runtime);
     }
     return runtime;

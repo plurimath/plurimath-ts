@@ -1,4 +1,3 @@
-import { PargRuntime } from "parsanol";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ParseError, ParseOptionError } from "../../src/core/errors";
 import { createAsciimathParser } from "../../src/formats/asciimath/amath";
@@ -10,6 +9,7 @@ import { parseUnicodemath } from "../../src/formats/unicodemath/parser";
 import { unicodemathStage } from "../../src/formats/unicodemath/stage";
 import { createUnicodemathParser } from "../../src/formats/unicodemath/umath";
 import { STACK_EXHAUSTED_MESSAGE } from "../../src/pegkit/atom";
+import { BoundedRuntime } from "../../src/pegkit/bounded-runtime";
 
 /** The smallest umath artifact the mapper accepts: a root capture and nothing else. */
 const UMATH_ARTIFACT = JSON.stringify({
@@ -63,7 +63,7 @@ const DEFAULTS = [
     name: "html",
     parse: parseHtml,
     fail: (error: Error) =>
-      vi.spyOn(PargRuntime.prototype, "parseShapeWithCompatibility").mockImplementation(() => {
+      vi.spyOn(BoundedRuntime.prototype, "parseShapeWithCompatibility").mockImplementation(() => {
         throw error;
       }),
   },

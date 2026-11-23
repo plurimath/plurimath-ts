@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { CallDepthLimitExceeded, PargRuntime } from "parsanol";
+import { CallDepthLimitExceeded } from "parsanol";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Plurimath from "../../src/compat/index";
 import { type FormulaNode, normalize, ParseError } from "../../src/core/index";
@@ -15,6 +15,7 @@ import { toOmml } from "../../src/formats/omml/index";
 import { parseUnicodemath, parseUnicodemathTree } from "../../src/formats/unicodemath/parser";
 import { toUnicodemath } from "../../src/formats/unicodemath/renderer";
 import { UnicodemathRuntime, unicodemathStage } from "../../src/formats/unicodemath/stage";
+import { BoundedRuntime } from "../../src/pegkit/bounded-runtime";
 
 vi.mock("../../src/formats/latex/grammar", () => ({
   latexGrammar: () => {
@@ -118,7 +119,7 @@ describe.each([
     stage: latexStage,
     parser: parseLatex,
     tree: parseLatexTree,
-    spy: () => vi.spyOn(PargRuntime.prototype, "parseShape"),
+    spy: () => vi.spyOn(BoundedRuntime.prototype, "parseShape"),
   },
   {
     name: "unicode",
@@ -210,11 +211,14 @@ describe("the pinned umath reporter adapter", () => {
         if (delivery === "throw") throw wire;
         return JSON.stringify({ ok: false, error: wire });
       });
-      const runtime = Object.create(UnicodemathRuntime.prototype) as UnicodemathRuntime;
-      Object.defineProperties(runtime, {
-        entry: { value: "dot" },
-        artifact: { value: { parseShapeWithReporter: native } },
-      });
+      const runtime = new UnicodemathRuntime(
+        readFileSync(
+          createRequire(import.meta.url).resolve("@plurimath/umath-ts/artifacts/umath.json"),
+          "utf8",
+        ),
+        "dot",
+      );
+      runtime.artifact.parseShapeWithCallDepth = native;
       try {
         runtime.parseShapeWithReporter("x", "parslet", "deepest");
         expect.unreachable("expected a resource refusal");
@@ -222,7 +226,8 @@ describe("the pinned umath reporter adapter", () => {
         expect(error).toBeInstanceOf(Error);
         expect(error).toMatchObject({ name, category, depth: 1025, maxDepth: 1024 });
       }
-      expect(native).toHaveBeenCalledWith("dot", "x", "parslet", "deepest");
+      runtime.artifact.free();
+      expect(native).toHaveBeenCalledWith("dot", "x", "parslet", "deepest", 8192);
     }
   });
 });

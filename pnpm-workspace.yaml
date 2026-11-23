@@ -3,3 +3,4 @@ onlyBuiltDependencies:
   - "@plurimath/amath-ts@https://codeload.github.com/unitsml/amath-ts/tar.gz/b69d51ba8db5e8d7c423cf8bdc120a97047cdee6"
   - "@plurimath/latexmath-ts@https://codeload.github.com/plurimath/latexmath-ts/tar.gz/69d877b43b5863bf39e9ba211a9116c125b7db12"
   - "@plurimath/umath-ts@https://codeload.github.com/plurimath/umath-ts/tar.gz/787840cc71a1e31ac6a2df6873b9dacad4b39241"
+  - "parsanol@https://codeload.github.com/suleman-uzair/parsanol-ts/tar.gz/af5d8cc8825f5e866dd2a52225fda7d945a1598d"

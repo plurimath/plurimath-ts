@@ -158,8 +158,8 @@ jobs:
           path: .stage-deps/umath
       - uses: actions/checkout@v5
         with:
-          repository: parsanol/parsanol-ts
-          ref: 7ce2e27a201de90e6b35a4090ae3c906d7b9cb7f
+          repository: suleman-uzair/parsanol-ts
+          ref: af5d8cc8825f5e866dd2a52225fda7d945a1598d
           path: .stage-deps/parsanol
       - name: Build the pinned runtime packages
         run: |

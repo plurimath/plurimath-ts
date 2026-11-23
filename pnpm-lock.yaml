@@ -18,8 +18,8 @@ importers:
         specifier: github:plurimath/umath-ts#787840cc71a1e31ac6a2df6873b9dacad4b39241
         version: https://codeload.github.com/plurimath/umath-ts/tar.gz/787840cc71a1e31ac6a2df6873b9dacad4b39241
       parsanol:
-        specifier: 1.5.8
-        version: 1.5.8
+        specifier: git+https://github.com/suleman-uzair/parsanol-ts.git#af5d8cc8825f5e866dd2a52225fda7d945a1598d
+        version: https://codeload.github.com/suleman-uzair/parsanol-ts/tar.gz/af5d8cc8825f5e866dd2a52225fda7d945a1598d
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: ^0.18.5
@@ -477,12 +477,12 @@ packages:
     engines: {node: '>=22'}
 
   '@plurimath/latexmath-ts@https://codeload.github.com/plurimath/latexmath-ts/tar.gz/69d877b43b5863bf39e9ba211a9116c125b7db12':
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/plurimath/latexmath-ts/tar.gz/69d877b43b5863bf39e9ba211a9116c125b7db12}
+    resolution: {gitHosted: true, integrity: sha512-OqEExiDSoUojVhS94nzJGF7tmKh5Wpg+bjZHCxHzgaxc4ZNuHm8lh/gn/B8yt1jvkBKsRmpnptJrrX3Lqo9TOg==, tarball: https://codeload.github.com/plurimath/latexmath-ts/tar.gz/69d877b43b5863bf39e9ba211a9116c125b7db12}
     version: 0.1.0-alpha.0
     engines: {node: '>=22'}
 
   '@plurimath/umath-ts@https://codeload.github.com/plurimath/umath-ts/tar.gz/787840cc71a1e31ac6a2df6873b9dacad4b39241':
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/plurimath/umath-ts/tar.gz/787840cc71a1e31ac6a2df6873b9dacad4b39241}
+    resolution: {gitHosted: true, integrity: sha512-JsbLrhwLA6Q5ho/5TYkRkO6Olg3jex9z6Y31na9jk6mcO3hMdJIs+nfAsQwmzkJER1kEw1Ie4SpAW9iQT4xwfA==, tarball: https://codeload.github.com/plurimath/umath-ts/tar.gz/787840cc71a1e31ac6a2df6873b9dacad4b39241}
     version: 0.1.0-alpha.0
     engines: {node: '>=22'}
 
@@ -1356,6 +1356,11 @@ packages:
     resolution: {integrity: sha512-/SWw9oTIZC3UUjpPfTSi+ggbELG6z1wSc++Gxqt301rENbCHlIpdHBpxbBqKsfmb31m5hbMb9wpn33RNtveZOg==}
     engines: {node: '>=22'}
 
+  parsanol@https://codeload.github.com/suleman-uzair/parsanol-ts/tar.gz/af5d8cc8825f5e866dd2a52225fda7d945a1598d:
+    resolution: {gitHosted: true, integrity: sha512-L3OnyKa+c/GI4MOTxX/h6oS3seda/AwZUKlU7QgBlWRNC4emWTVM7rPZJnoVMrfaYAiqDeOev5JRPXmpQhnVAQ==, tarball: https://codeload.github.com/suleman-uzair/parsanol-ts/tar.gz/af5d8cc8825f5e866dd2a52225fda7d945a1598d}
+    version: 1.5.16
+    engines: {node: '>=22'}
+
   parse5-htmlparser2-tree-adapter@6.0.1:
     resolution: {integrity: sha512-qPuWvbLgvDGilKc5BoicRovlT4MtYT6JfJyBOMDsKoiT+GiuP5qyrPCnR9HcPECIJJmZh5jRndyNThnhhb/vlA==}
 
@@ -1724,12 +1729,15 @@ packages:
 
   yuku-ast@0.8.1:
     resolution: {integrity: sha512-+k1E2f08y0k1+vpdD1KUCzDh2JXvwirMa8YR2Jr7VCS4zAo3eT5A/HbJCqaVGd6idaPY0gwLM9C4seEY4h10Hw==}
+    deprecated: 'Yuku is now one package with one core. Use "yuku" instead: https://yuku.fyi/javascript/. Existing installs keep working but get no more fixes.'
 
   yuku-codegen@0.8.1:
     resolution: {integrity: sha512-/4Sbg9K9HpCe3PidmMbs9TzJ62gq3KmQY279TB0EGKdMoM8LfcmIg4E9wS2J/ylbFuQaWcYqf5dBKr8zubdlKA==}
+    deprecated: 'Yuku is now one package with one core. Use "yuku" instead: https://yuku.fyi/javascript/. Existing installs keep working but get no more fixes.'
 
   yuku-parser@0.8.1:
     resolution: {integrity: sha512-YvUz2jdFMIq0QjN8LmI32ox+RBCn3l8VToAXVQ5QFfLTxSxmGZS6JP80ptePEju+CpeTdINLmUm7Ewodzh1QnQ==}
+    deprecated: 'Yuku is now one package with one core. Use "yuku" instead: https://yuku.fyi/javascript/. Existing installs keep working but get no more fixes.'
 
 snapshots:
 
@@ -2622,6 +2630,8 @@ snapshots:
   parsanol@1.5.7: {}
 
   parsanol@1.5.8: {}
+
+  parsanol@https://codeload.github.com/suleman-uzair/parsanol-ts/tar.gz/af5d8cc8825f5e866dd2a52225fda7d945a1598d: {}
 
   parse5-htmlparser2-tree-adapter@6.0.1:
     dependencies:

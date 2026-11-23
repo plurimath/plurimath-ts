@@ -6,6 +6,7 @@ import Plurimath from "../../../src/compat/index";
 import { normalize, ParseError } from "../../../src/core/index";
 import { parseHtml } from "../../../src/formats/html/parser";
 import { htmlRuntime } from "../../../src/formats/html/stage";
+import { BoundedRuntime } from "../../../src/pegkit/bounded-runtime";
 import source from "./initialized-source.json";
 
 // A default parser must consume the artifact; a legacy grammar fallback would
@@ -95,9 +96,11 @@ describe("the default HTML parser uses the shared PARG artifact", () => {
   });
 
   it("uses the artifact runtime in strict compatibility mode", () => {
-    const call = vi.spyOn(PargRuntime.prototype, "parseShapeWithCompatibility");
+    const call = vi.spyOn(BoundedRuntime.prototype, "parseShapeWithCompatibility");
+    const engineCall = vi.spyOn(PargRuntime.prototype, "parseShapeWithCallDepth");
     parseHtml("x<sup>2</sup>");
     expect(call).toHaveBeenCalledWith("x<sup>2</sup>", "strict");
+    expect(engineCall).toHaveBeenCalledWith("x<sup>2</sup>", "strict", "default", 1536);
   });
 
   it("reuses only the matching decimal runtime", () => {
@@ -118,14 +121,14 @@ describe("the default HTML parser uses the shared PARG artifact", () => {
 
   it("preserves engine failures rather than trying a second grammar", () => {
     const failure = new Error("runtime exhausted");
-    vi.spyOn(PargRuntime.prototype, "parseShapeWithCompatibility").mockImplementation(() => {
+    vi.spyOn(BoundedRuntime.prototype, "parseShapeWithCompatibility").mockImplementation(() => {
       throw failure;
     });
     expect(() => parseHtml("x")).toThrow(failure);
   });
 
   it("maps normalized UTF-8 refusal offsets to the original UTF-16 input", () => {
-    vi.spyOn(PargRuntime.prototype, "parseShapeWithCompatibility").mockReturnValue({
+    vi.spyOn(BoundedRuntime.prototype, "parseShapeWithCompatibility").mockReturnValue({
       ok: false,
       error: { offset: 2, ranked: [] },
     });

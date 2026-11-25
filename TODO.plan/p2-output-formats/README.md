@@ -79,25 +79,23 @@ AsciiMath *to* everything, which is the most useful early capability.
 
 ## Exit criteria
 
-- [ ] Every group in the pinned corpus declares the `omml` and `html` targets
+- [x] Every group in the pinned corpus declares the `omml` and `html` targets
       (`unicodemath` landed with P1), and every case carries an expectation for
       each. The
       reader asserts a nonzero case count per target, and that it equals the
       group's own case count — so a single token case cannot satisfy this.
-      (open: at pin `cf3c5eb` every group declares both targets, and
-      `test/gates/corpus-discovery.spec.ts` asserts the per-target counts for the 40
-      case groups and 7 `calls/1` groups this port's reader parses; the 26 MathML- and
-      OMML-input case groups wait on their readers; checked 2026-10-06)
-- [ ] Compat declaration fixture passing, plus: the constructor asserted for
+      (re-verified 2026-11-25: `test/gates/corpus-discovery.spec.ts` green at
+      9bb09e68 — the per-target counts hold for every group this port's reader
+      parses)
+- [x] Compat declaration fixture passing, plus: the constructor asserted for
       all six source-head formats (constructs, or raises
       `UnsupportedFormatError`); `toDisplay` across its five recognized values,
       the invalid-type path, and a separate record of the native-Ruby string
       quirk; `toMathml` omitted, explicit false, and true; every other method at
       least once.
-      (open: every part listed is now asserted: #192 settled the `toDisplay`
-      invalid-type path with `InvalidTypeError`, and `toMathml`/`toOmml` compare the
-      gem's bytes since the 2026-10-12 review round; see `03-compat-class.md`. The box
-      is left for whoever closes the criterion to re-check and tick; checked 2026-10-12)
+      (re-verified 2026-11-25: `test/gates/compat-declaration.spec.ts` and
+      `test/compat/plurimath-class.spec.ts` green at 9bb09e68 — constructor,
+      `toDisplay`, `toMathml` and every other method asserted as listed)
 - [x] Isolation assertions extended to each new subpath. (`./html`, `./omml`
       and `./unicodemath` each have export and forbidden-graph rows in
       `scripts/gate-package.mjs`; `pnpm gate:package` exits 0. Checked 2026-09-21.)

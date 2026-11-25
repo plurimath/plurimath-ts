@@ -85,7 +85,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: plurimath/latexmath-ts
-          ref: 25537f4a2c09b522340d23804704fe99e4a94ecc
+          ref: 69d877b43b5863bf39e9ba211a9116c125b7db12
           path: .stage-deps/latexmath
       - name: Build pinned latexmath stage
         run: |
@@ -149,7 +149,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: plurimath/latexmath-ts
-          ref: 25537f4a2c09b522340d23804704fe99e4a94ecc
+          ref: 69d877b43b5863bf39e9ba211a9116c125b7db12
           path: .stage-deps/latexmath
       - uses: actions/checkout@v5
         with:
@@ -158,8 +158,8 @@ jobs:
           path: .stage-deps/umath
       - uses: actions/checkout@v5
         with:
-          repository: parsanol/parsanol-ts
-          ref: 7ce2e27a201de90e6b35a4090ae3c906d7b9cb7f
+          repository: suleman-uzair/parsanol-ts
+          ref: af5d8cc8825f5e866dd2a52225fda7d945a1598d
           path: .stage-deps/parsanol
       - name: Build the pinned runtime packages
         run: |
@@ -308,7 +308,7 @@ jobs:
     # step checks it against every pin and against the submodule gitlink.
     env:
       GH_TOKEN: ${{ github.token }}
-      TESTSUITE_COMMIT: 025eff6747230fed73da1316f2dc9aebb6e98801
+      TESTSUITE_COMMIT: 4a23df9293e78f44410ebbc806bf35dfde9a5534
       TESTSUITE: submodules/plurimath-testsuite
       PINS: test/fixtures/testsuite-pins
     steps:
@@ -361,7 +361,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: plurimath/latexmath-ts
-          ref: 25537f4a2c09b522340d23804704fe99e4a94ecc
+          ref: 69d877b43b5863bf39e9ba211a9116c125b7db12
           path: .stage-deps/latexmath
       - uses: actions/checkout@v5
         with:

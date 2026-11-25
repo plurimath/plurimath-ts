@@ -106,6 +106,7 @@
       "activatesAt": "P1-completion",
       "run": "pnpm test rejection",
       "selects": [
+        "test/core/rejection-offset-exceptions.spec.ts",
         "test/formats/asciimath/rejection-parity.spec.ts",
         "test/formats/html/rejection-parity.spec.ts",
         "test/formats/latex/rejection-parity.spec.ts",

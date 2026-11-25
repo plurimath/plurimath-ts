@@ -34,12 +34,12 @@ export function lowerHtmlCaptures(shape: unknown, input: string): ParseValue {
           (fields.length as number) >= 0
         ) {
           const start = positionAt(positions, fields.offset as number);
-          const text =
-            typeof fields.value === "string"
-              ? fields.value
-              : Array.from(input.slice(start))
-                  .slice(0, fields.length as number)
-                  .join("");
+          // WASM transports lone UTF-16 halves as U+FFFD. Captures are spans
+          // into our normalized input; take their original text so transport
+          // cannot silently change a caller's symbols.
+          const text = Array.from(input.slice(start))
+            .slice(0, fields.length as number)
+            .join("");
           output.push({ value: text, origin: "reference" });
         } else if (
           keys.length === 2 &&

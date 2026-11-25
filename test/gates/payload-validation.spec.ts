@@ -357,6 +357,9 @@ const NATIVE_AUXILIARY_JSON = [
   // Independently pinned HTML PARG source observations; its inline provenance
   // is validated by parsanol.spec.ts rather than the legacy oracle envelope.
   "test/formats/html/initialized-source.json",
+  // Inline producer hashes and nonempty Ruby observations are checked by the default-stage specs.
+  "test/formats/html/default-stage.json",
+  "test/formats/text-default-stage.json",
   "test/formats/unicodemath/completion-fixtures.metadata.json",
   "test/formats/unicodemath/unreached-fixtures.json",
   "test/formats/unicodemath/unreached-fixtures.metadata.json",

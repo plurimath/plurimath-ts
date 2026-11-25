@@ -1,6 +1,6 @@
 {
   "source": "plurimath/plurimath-testsuite",
-  "revision": "025eff6747230fed73da1316f2dc9aebb6e98801",
+  "revision": "4a23df9293e78f44410ebbc806bf35dfde9a5534",
   "purpose": "Six parse-path byte comparisons and three refusals; not full format parity",
   "payloads": [
     {

@@ -48,7 +48,11 @@ jobs:
           cache: pnpm
       - name: Set up npm trusted publishing
         run: npm install --global npm@^11
-      - run: pnpm install --frozen-lockfile --ignore-scripts
+      # The github: stage deps (@plurimath/amath-ts and friends) build in
+# their `prepare` lifecycle script; --ignore-scripts skips it and the
+# browser entries their consumers import never exist (the same
+# install the CI check job uses, which is green).
+      - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - name: Verify packed installation
         id: package

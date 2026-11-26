@@ -54,9 +54,9 @@ jobs:
       - name: Set up npm trusted publishing
         run: npm install --global npm@^11
       # The github: stage deps (@plurimath/amath-ts and friends) build in
-# their `prepare` lifecycle script; --ignore-scripts skips it and the
-# browser entries their consumers import never exist (the same
-# install the CI check job uses, which is green).
+      # their `prepare` lifecycle script; --ignore-scripts skips it and the
+      # browser entries their consumers import never exist (the same
+      # install the CI check job uses, which is green).
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - name: Verify packed installation
@@ -66,3 +66,37 @@ jobs:
         env:
           TARBALL: ${{ steps.package.outputs.tarball }}
         run: npm publish "$TARBALL" --provenance --access public
+
+  alias:
+    # The unscoped `plurimath` alias — a thin re-export of the scoped
+    # package for casual consumers. Its version (and its dependency
+    # pin) sync with the main package at publish time; the first
+    # publish needs the unscoped name's trusted publisher registered
+    # on npmjs.com (same binding: this repo, this workflow).
+    needs: publish
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Set up npm trusted publishing
+        run: npm install --global npm@^11
+      - name: Sync the alias version with the main package
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import {readFileSync, writeFileSync} from 'node:fs';
+          const main = JSON.parse(readFileSync('package.json', 'utf8'));
+          const path = 'npm/plurimath-alias/package.json';
+          const alias = JSON.parse(readFileSync(path, 'utf8'));
+          alias.version = main.version;
+          alias.dependencies['@plurimath/plurimath'] = main.version;
+          writeFileSync(path, JSON.stringify(alias, null, 2) + '\n');
+          console.log(`plurimath@${alias.version} -> @plurimath/plurimath@${main.version}`);
+          JS
+      - name: Publish the alias
+        working-directory: npm/plurimath-alias
+        run: npm publish --provenance --access public

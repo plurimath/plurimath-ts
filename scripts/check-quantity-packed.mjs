@@ -100,7 +100,7 @@ const [packed] = JSON.parse(
 const tarball = join(scratch, packed.filename);
 writeFileSync(join(scratch, "package.json"), JSON.stringify({ private: true, type: "module" }));
 run("npm", ["install", "--no-audit", "--no-fund", "--omit=dev", tarball], scratch);
-const pkg = join(scratch, "node_modules/@plurimath/plurimath-ts");
+const pkg = join(scratch, "node_modules/@plurimath/plurimath");
 const manifest = JSON.parse(readFileSync(join(pkg, "package.json"), "utf8"));
 const esmEntry = manifest.exports["./evaluation/wasm"].import.default;
 const assetEntry = manifest.exports["./evaluation/plurimath_numeric.wasm"];
@@ -125,16 +125,16 @@ const replaySource = `const replay = ${replay.toString()};`;
 const nodeRun = (mode) => {
   const body =
     mode === "module"
-      ? `import * as api from "@plurimath/plurimath-ts/evaluation/wasm";
+      ? `import * as api from "@plurimath/plurimath/evaluation/wasm";
          import { readFileSync } from "node:fs"; import { createRequire } from "node:module";
          ${replaySource}
-         const asset = readFileSync(createRequire(import.meta.url).resolve("@plurimath/plurimath-ts/evaluation/plurimath_numeric.wasm"));
+         const asset = readFileSync(createRequire(import.meta.url).resolve("@plurimath/plurimath/evaluation/plurimath_numeric.wasm"));
          const result = await replay(api, asset, JSON.parse(readFileSync(${JSON.stringify(strictFile)}, "utf8")), JSON.parse(readFileSync(${JSON.stringify(legacyFile)}, "utf8")));
          process.stdout.write(JSON.stringify(result));`
-      : `const api = require("@plurimath/plurimath-ts/evaluation/wasm");
+      : `const api = require("@plurimath/plurimath/evaluation/wasm");
          const { readFileSync } = require("node:fs");
          ${replaySource}
-         const asset = readFileSync(require.resolve("@plurimath/plurimath-ts/evaluation/plurimath_numeric.wasm"));
+         const asset = readFileSync(require.resolve("@plurimath/plurimath/evaluation/plurimath_numeric.wasm"));
          replay(api, asset, JSON.parse(readFileSync(${JSON.stringify(strictFile)}, "utf8")), JSON.parse(readFileSync(${JSON.stringify(legacyFile)}, "utf8")))
            .then((result) => process.stdout.write(JSON.stringify(result)), (error) => { console.error(error); process.exitCode = 1; });`;
   const file = join(scratch, mode === "module" ? "replay.mjs" : "replay.cjs");

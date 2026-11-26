@@ -327,20 +327,20 @@ present: 38 kinds x 6 formats.
 `package.json` `exports` map:
 
 ```
-@plurimath/plurimath-ts             → root: default-exports the compat `Plurimath`
+@plurimath/plurimath             → root: default-exports the compat `Plurimath`
                                       class, plus parse, ParseOptions, FORMATS,
                                       the Format type, /core and evaluation exports
-@plurimath/plurimath-ts/core        → FormulaNode, node types, errors
-@plurimath/plurimath-ts/asciimath   → parseAsciimath, toAsciimath
-@plurimath/plurimath-ts/html        → parseHtml, toHtml
-@plurimath/plurimath-ts/latex       → parseLatex, toLatex
-@plurimath/plurimath-ts/mathml      → parseMathml, toMathml
-@plurimath/plurimath-ts/omml        → parseOmml, toOmml
-@plurimath/plurimath-ts/unicodemath → parseUnicodemath (partial grammar), toUnicodemath
+@plurimath/plurimath/core        → FormulaNode, node types, errors
+@plurimath/plurimath/asciimath   → parseAsciimath, toAsciimath
+@plurimath/plurimath/html        → parseHtml, toHtml
+@plurimath/plurimath/latex       → parseLatex, toLatex
+@plurimath/plurimath/mathml      → parseMathml, toMathml
+@plurimath/plurimath/omml        → parseOmml, toOmml
+@plurimath/plurimath/unicodemath → parseUnicodemath (partial grammar), toUnicodemath
 bin: plurimath                      → dist/cli.mjs, `plurimath convert` (not a library subpath)
-@plurimath/plurimath-ts/formatting  → (NOT YET PUBLISHED — see below)
-@plurimath/plurimath-ts/evaluation  → (FUTURE — not published; evaluation lands in P4+, §9)
-@plurimath/plurimath-ts/unitsml     → (FUTURE — not published; UnitsML is deferred, §5)
+@plurimath/plurimath/formatting  → (NOT YET PUBLISHED — see below)
+@plurimath/plurimath/evaluation  → (FUTURE — not published; evaluation lands in P4+, §9)
+@plurimath/plurimath/unitsml     → (FUTURE — not published; UnitsML is deferred, §5)
 ...one subpath per format
 ```
 

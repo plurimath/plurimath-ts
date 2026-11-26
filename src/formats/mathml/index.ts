@@ -1,5 +1,5 @@
 /**
- * `@plurimath/plurimath-ts/mathml` — the MathML subpath.
+ * `@plurimath/plurimath/mathml` — the MathML subpath.
  *
  * Parses MathML documents and renders formula trees. One physical entry per
  * published subpath (ARCHITECTURE.md §3), so a consumer reading or rendering

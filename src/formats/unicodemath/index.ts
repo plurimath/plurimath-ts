@@ -1,5 +1,5 @@
 /**
- * `@plurimath/plurimath-ts/unicodemath` — the UnicodeMath subpath.
+ * `@plurimath/plurimath/unicodemath` — the UnicodeMath subpath.
  *
  * Both directions, as ARCHITECTURE.md §3 requires of a format subpath: it
  * exports every function the format owns, "parsing *and* rendering when both

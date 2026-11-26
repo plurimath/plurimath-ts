@@ -1,5 +1,5 @@
 /**
- * `@plurimath/plurimath-ts/html` — the HTML subpath.
+ * `@plurimath/plurimath/html` — the HTML subpath.
  *
  * Both directions now: the transform landed beside the grammar, and
  * ARCHITECTURE.md §3 is explicit that "a format subpath exports every function

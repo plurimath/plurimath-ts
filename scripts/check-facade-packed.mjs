@@ -81,7 +81,7 @@ const [packed] = JSON.parse(
 const tarball = join(scratch, packed.filename);
 writeFileSync(join(scratch, "package.json"), JSON.stringify({ private: true, type: "module" }));
 run("npm", ["install", "--no-audit", "--no-fund", "--omit=dev", tarball], scratch);
-const pkg = join(scratch, "node_modules/@plurimath/plurimath-ts");
+const pkg = join(scratch, "node_modules/@plurimath/plurimath");
 const manifest = JSON.parse(readFileSync(join(pkg, "package.json"), "utf8"));
 const entry = manifest.exports["./facade/wasm"];
 const assetEntry = manifest.exports["./facade/plurimath_facade.wasm"];
@@ -108,17 +108,17 @@ const limitSource = limit === undefined ? "{}" : `{ limit: ${limit} }`;
 const nodeRun = (moduleMode) => {
   const body = `${
     moduleMode === "esm"
-      ? `import * as api from "@plurimath/plurimath-ts/facade/wasm";
-import * as current from "@plurimath/plurimath-ts";
+      ? `import * as api from "@plurimath/plurimath/facade/wasm";
+import * as current from "@plurimath/plurimath";
 import { readFileSync } from "node:fs"; import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);`
-      : `const api = require("@plurimath/plurimath-ts/facade/wasm");
-const current = require("@plurimath/plurimath-ts");
+      : `const api = require("@plurimath/plurimath/facade/wasm");
+const current = require("@plurimath/plurimath");
 const { readFileSync } = require("node:fs");`
   }
 ${replaySource}
 (async () => {
-  const asset = readFileSync(require.resolve("@plurimath/plurimath-ts/facade/plurimath_facade.wasm"));
+  const asset = readFileSync(require.resolve("@plurimath/plurimath/facade/plurimath_facade.wasm"));
   const data = JSON.parse(readFileSync(${JSON.stringify(dataFile)}, "utf8"));
   const kernel = await api.initFacadeWasm(asset);
   const textParseParity = (${replayTextParseParity.toString()})(current, kernel, ${JSON.stringify(textParseFixture)});

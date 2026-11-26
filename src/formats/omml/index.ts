@@ -1,5 +1,5 @@
 /**
- * `@plurimath/plurimath-ts/omml` — the OMML subpath.
+ * `@plurimath/plurimath/omml` — the OMML subpath.
  *
  * Parses OMML documents and renders formula trees. The parser's corpus
  * model and rejection outcomes are pinned in `test/formats/omml/`.

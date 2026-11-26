@@ -23,7 +23,7 @@ drift apart silently.
 
 ## Status
 
-The initial release is `@plurimath/plurimath-ts@0.1.0`, with native TypeScript parsers
+The initial release is `@plurimath/plurimath@0.1.0`, with native TypeScript parsers
 and renderers for all six formats. This release exposes format subpaths within
 one npm package. Separate language packages and remaining shared-fixture
 organization are deferred.
@@ -70,7 +70,7 @@ in milestones. The current one is recorded as `currentMilestone` in
 Install the package with Node.js 22 or later:
 
 ```sh
-npm install @plurimath/plurimath-ts
+npm install @plurimath/plurimath
 ```
 
 Both ESM (`import`) and CommonJS (`require`) entries are provided. The CLI file
@@ -97,15 +97,15 @@ nonempty option keys with `ParseOptionError`. The exported `ParseOptions<F>` typ
 for format `F`; the compat constructor keeps its existing two arguments.
 
 ```js
-import { parse } from "@plurimath/plurimath-ts";
+import { parse } from "@plurimath/plurimath";
 const formula = parse("1,5", "asciimath", { locale: "de" });
 ```
 
 ### Per-format subpaths
 
 ```js
-import { parseAsciimath } from "@plurimath/plurimath-ts/asciimath";
-import { toLatex } from "@plurimath/plurimath-ts/latex";
+import { parseAsciimath } from "@plurimath/plurimath/asciimath";
+import { toLatex } from "@plurimath/plurimath/latex";
 
 toLatex(parseAsciimath("x^2 + frac(1)(2)")); // x^{2} + \frac{1}{2}
 ```
@@ -129,7 +129,7 @@ the same algorithms as Ruby's bigdecimal gem, so the last digit matches the
 gem's.
 
 ```js
-import { evaluateResult, parse } from "@plurimath/plurimath-ts";
+import { evaluateResult, parse } from "@plurimath/plurimath";
 
 const options = { mode: "strict", guardDigits: 20 };
 evaluateResult(parse("sin(1)", "asciimath"), {}, options).value;
@@ -163,9 +163,9 @@ tracks that build fix. With a binding containing the export fix:
 
 ```js
 import * as leptris from "leptris";
-import { createMathmlParser } from "@plurimath/plurimath-ts/mathml/leptris";
-import { createOmmlParser } from "@plurimath/plurimath-ts/omml/leptris";
-import { toMathml } from "@plurimath/plurimath-ts/mathml";
+import { createMathmlParser } from "@plurimath/plurimath/mathml/leptris";
+import { createOmmlParser } from "@plurimath/plurimath/omml/leptris";
+import { toMathml } from "@plurimath/plurimath/mathml";
 
 await leptris.init();
 const parseMathml = createMathmlParser(leptris);
@@ -184,8 +184,8 @@ binding contract and real-WASM verification command.
 
 ### Serialized evaluation with WASM
 
-Import `initNumericWasm` from `@plurimath/plurimath-ts/evaluation/wasm`
-and pass the bundled `@plurimath/plurimath-ts/evaluation/plurimath_numeric.wasm`
+Import `initNumericWasm` from `@plurimath/plurimath/evaluation/wasm`
+and pass the bundled `@plurimath/plurimath/evaluation/plurimath_numeric.wasm`
 bytes or a `URL` object pointing to them. The evaluator's `evaluateRequest(json)` accepts
 numeric, quantity, and GUM v1 requests. The kernel supports uncertainty
 propagation, series statistics, coverage factors, conformance decisions, and
@@ -198,7 +198,7 @@ kernel returns typed refusals for unsupported sampling profiles. The pinned requ
 
 ### Native format facade with WASM
 
-`@plurimath/plurimath-ts/facade/wasm` loads the Rust `plurimath-facade` crate
+`@plurimath/plurimath/facade/wasm` loads the Rust `plurimath-facade` crate
 compiled to WebAssembly. It parses AsciiMath, HTML, LaTeX, MathML, OMML, PMA,
 UnicodeMath and UnitsML, keeps the common `{class, fields}` model, and writes
 AsciiMath, LaTeX, UnicodeMath, HTML, MathML and OMML. Parsing, options and
@@ -206,13 +206,13 @@ writers all run in the native facade; this entry only moves JSON requests in
 and out of the module. It does not use the TypeScript parsers or renderers.
 
 Initialize it once with the bundled
-`@plurimath/plurimath-ts/facade/plurimath_facade.wasm` bytes, a `fetch`
+`@plurimath/plurimath/facade/plurimath_facade.wasm` bytes, a `fetch`
 response or a `URL`. The SHA-256 of the asset is checked before it is
 compiled. Calling `initFacadeWasm` again with the same asset returns the same
 kernel.
 
 ```ts
-import { FacadeError, initFacadeWasm } from "@plurimath/plurimath-ts/facade/wasm";
+import { FacadeError, initFacadeWasm } from "@plurimath/plurimath/facade/wasm";
 
 const kernel = await initFacadeWasm(wasmBytes);
 const formula = kernel.parse("x^2", "asciimath");
@@ -254,7 +254,7 @@ API and the separate UnitsML-runtime `evaluateQuantity` API remain unchanged.
 import {
   initNumericWasm,
   evaluateQuantityRequest,
-} from "@plurimath/plurimath-ts/evaluation/wasm";
+} from "@plurimath/plurimath/evaluation/wasm";
 
 const kernel = await initNumericWasm(wasmBytes);
 const response = evaluateQuantityRequest(kernel, {
@@ -300,7 +300,7 @@ The root entry also default-exports `Plurimath`, shaped after the
 `to*` method.
 
 ```js
-import Plurimath from "@plurimath/plurimath-ts";
+import Plurimath from "@plurimath/plurimath";
 
 const p = new Plurimath("x^2", "asciimath");
 p.toLatex();       // x^{2}
@@ -370,7 +370,7 @@ rather than on `instanceof` where a caller may load two copies of the package.
 Exported from `./core`:
 
 ```js
-import { ParseError, UnsupportedFeatureError, UnsupportedFormatError } from "@plurimath/plurimath-ts/core";
+import { ParseError, UnsupportedFeatureError, UnsupportedFormatError } from "@plurimath/plurimath/core";
 ```
 
 | Class | `code` | Seen when |
@@ -412,8 +412,8 @@ owns the shared grammar and WASM engine. Initialization remains caller-owned.
 
 ```ts
 import { initialize } from "@plurimath/amath-ts";
-import { createAsciimathParser } from "@plurimath/plurimath-ts/asciimath/amath";
-import { toLatex } from "@plurimath/plurimath-ts/latex";
+import { createAsciimathParser } from "@plurimath/plurimath/asciimath/amath";
+import { toLatex } from "@plurimath/plurimath/latex";
 
 const parseAsciimath = createAsciimathParser(await initialize());
 console.log(toLatex(parseAsciimath("x^2")));
@@ -434,7 +434,7 @@ exports, and construct each runtime with entry `document`. Keep the artifact
 text unchanged: parsing and reserializing JSON can invalidate its checksum.
 
 ```ts
-import { createHtmlParser } from "@plurimath/plurimath-ts/html/parsanol";
+import { createHtmlParser } from "@plurimath/plurimath/html/parsanol";
 
 // Each value is an initialized SDK PargRuntime for the corresponding asset.
 const runtimes = new Map([[".", dotRuntime], [",", commaRuntime], ["٫", arabicRuntime]]);

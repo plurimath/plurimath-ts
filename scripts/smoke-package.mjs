@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-assert.equal(manifest.name, "@plurimath/plurimath-ts");
+assert.equal(manifest.name, "@plurimath/plurimath");
 assert.notEqual(manifest.private, true);
 const scratch = mkdtempSync(join(tmpdir(), "plurimath-package-"));
 const env = { ...process.env };
@@ -36,7 +36,7 @@ const tarball = join(scratch, packed.filename);
 writeFileSync(join(scratch, "package.json"), JSON.stringify({ private: true, type: "module" }));
 run("npm", ["install", "--no-audit", "--no-fund", "--omit=dev", tarball]);
 const installed = JSON.parse(
-  readFileSync(join(scratch, "node_modules/@plurimath/plurimath-ts/package.json"), "utf8"),
+  readFileSync(join(scratch, "node_modules/@plurimath/plurimath/package.json"), "utf8"),
 );
 assert.equal(installed.version, manifest.version);
 const entries = Object.entries(manifest.exports)
@@ -48,45 +48,45 @@ for (const mode of ["module", "commonjs"]) {
     mode === "module"
       ? `import assert from 'node:assert/strict';
        for (const name of ${JSON.stringify(entries)}) assert.ok(Object.keys(await import(name)).length);
-       const {parseAsciimath}=await import('@plurimath/plurimath-ts/asciimath');
-       const {toLatex}=await import('@plurimath/plurimath-ts/latex');
+       const {parseAsciimath}=await import('@plurimath/plurimath/asciimath');
+       const {toLatex}=await import('@plurimath/plurimath/latex');
        assert.equal(toLatex(parseAsciimath('2')), '2');
-        const {evaluateRequest,parse,Plurimath}=await import('@plurimath/plurimath-ts');
+        const {evaluateRequest,parse,Plurimath}=await import('@plurimath/plurimath');
         assert.equal(parse('kg','unitsml').inputString,'kg');
         assert.equal(new Plurimath('kg','unitsml').toHtml(),'kg');
         const result=JSON.parse(evaluateRequest(JSON.stringify({schema:'plurimath.evaluate.numeric/1',ast:{type:'number',text:'2.10'}})));
         assert.deepEqual(result.result.value,{kind:'rational',numerator:'21',denominator:'10'});
         const {createRequire}=await import('node:module');
         const {readFileSync}=await import('node:fs');
-        const {initNumericWasm}=await import('@plurimath/plurimath-ts/evaluation/wasm');
-        const asset=createRequire(import.meta.url).resolve('@plurimath/plurimath-ts/evaluation/plurimath_numeric.wasm');
+        const {initNumericWasm}=await import('@plurimath/plurimath/evaluation/wasm');
+        const asset=createRequire(import.meta.url).resolve('@plurimath/plurimath/evaluation/plurimath_numeric.wasm');
         const wasm=await initNumericWasm(readFileSync(asset));
         assert.deepEqual(JSON.parse(wasm.evaluateRequest(JSON.stringify({schema:'plurimath.evaluate.numeric/1',ast:{type:'number',text:'2.10'}}))).result.value,result.result.value);`
       : `const assert=require('node:assert/strict');
        for (const name of ${JSON.stringify(entries)}) assert.ok(Object.keys(require(name)).length);
-       const {parseAsciimath}=require('@plurimath/plurimath-ts/asciimath');
-       const {toLatex}=require('@plurimath/plurimath-ts/latex');
+       const {parseAsciimath}=require('@plurimath/plurimath/asciimath');
+       const {toLatex}=require('@plurimath/plurimath/latex');
        assert.equal(toLatex(parseAsciimath('2')), '2');
-        const {evaluateRequest,parse,Plurimath}=require('@plurimath/plurimath-ts');
+        const {evaluateRequest,parse,Plurimath}=require('@plurimath/plurimath');
         assert.equal(parse('kg','unitsml').inputString,'kg');
         assert.equal(new Plurimath('kg','unitsml').toHtml(),'kg');
         const result=JSON.parse(evaluateRequest(JSON.stringify({schema:'plurimath.evaluate.numeric/1',ast:{type:'number',text:'2.10'}})));
         assert.deepEqual(result.result.value,{kind:'rational',numerator:'21',denominator:'10'});
         const {readFileSync}=require('node:fs');
-        const {initNumericWasm}=require('@plurimath/plurimath-ts/evaluation/wasm');
-        const asset=require.resolve('@plurimath/plurimath-ts/evaluation/plurimath_numeric.wasm');
+        const {initNumericWasm}=require('@plurimath/plurimath/evaluation/wasm');
+        const asset=require.resolve('@plurimath/plurimath/evaluation/plurimath_numeric.wasm');
         initNumericWasm(readFileSync(asset)).then(wasm=>{
           assert.deepEqual(JSON.parse(wasm.evaluateRequest(JSON.stringify({schema:'plurimath.evaluate.numeric/1',ast:{type:'number',text:'2.10'}}))).result.value,result.result.value);
         }).catch(error=>{console.error(error);process.exitCode=1});`;
   run(process.execPath, [`--input-type=${mode}`, "-e", script]);
 }
-const source = `import {parse} from '@plurimath/plurimath-ts';
-import {toLatex} from '@plurimath/plurimath-ts/latex';
-import {createMathmlParser} from '@plurimath/plurimath-ts/mathml/leptris';
+const source = `import {parse} from '@plurimath/plurimath';
+import {toLatex} from '@plurimath/plurimath/latex';
+import {createMathmlParser} from '@plurimath/plurimath/mathml/leptris';
 const formula = parse('2', 'asciimath');
 const unit = parse('kg', 'unitsml');
 void unit;
-import {evaluateRequest} from '@plurimath/plurimath-ts';
+import {evaluateRequest} from '@plurimath/plurimath';
 const wire: string = evaluateRequest('{}');
 void wire;
 const result: string = toLatex(formula);

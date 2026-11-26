@@ -481,7 +481,7 @@ Beyond writing the class itself, the measured blockers are:
   `unicodemath=18`, `html=0`, and `omml=0` (exit `0`). Since then plurimath-testsuite#22
   added both targets to every group, and this repository pins it at `cf3c5eb`.
 - **Set the publish identity and release metadata.** The package remains
-  `@plurimath/plurimath-ts`, version `0.0.0`, and `private: true`
+  `@plurimath/plurimath`, version `0.0.0`, and `private: true`
   (`package.json:2-4`); the distinct npm name and release line are a maintainer decision
   before first publish (`TODO.plan/open-decisions.md:32-34`).
 - **Complete packaging review and sign-off.** P2's exit criteria require package

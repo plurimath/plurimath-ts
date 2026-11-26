@@ -90,6 +90,10 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 24
+          # v5's default package-manager cache auto-detects the repo's
+          # pnpm lockfile and requires pnpm — this job is npm-only and
+          # has no pnpm setup, so the cache is off.
+          package-manager-cache: false
       - name: Set up npm trusted publishing
         run: npm install --global npm@^11
       - name: Sync the alias version with the main package

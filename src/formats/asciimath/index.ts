@@ -1,5 +1,5 @@
 /**
- * `@plurimath/plurimath-ts/asciimath` — the AsciiMath subpath.
+ * `@plurimath/plurimath/asciimath` — the AsciiMath subpath.
  *
  * One physical entry per published subpath (ARCHITECTURE.md §3): a consumer
  * who only reads AsciiMath should not pay for the LaTeX or MathML renderers,

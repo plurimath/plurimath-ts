@@ -1,5 +1,5 @@
 /**
- * `@plurimath/plurimath-ts/latex` — the LaTeX subpath.
+ * `@plurimath/plurimath/latex` — the LaTeX subpath.
  *
  * Both directions now: the parser landed in P3, and ARCHITECTURE.md §3 is
  * explicit that "a format subpath exports every function that format owns —

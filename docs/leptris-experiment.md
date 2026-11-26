@@ -16,9 +16,9 @@ tracks the build fix; final integration verification must use a build containing
 
 ```ts
 import * as leptris from "leptris";
-import { createMathmlParser } from "@plurimath/plurimath-ts/mathml/leptris";
-import { createOmmlParser } from "@plurimath/plurimath-ts/omml/leptris";
-import { toMathml } from "@plurimath/plurimath-ts/mathml";
+import { createMathmlParser } from "@plurimath/plurimath/mathml/leptris";
+import { createOmmlParser } from "@plurimath/plurimath/omml/leptris";
+import { toMathml } from "@plurimath/plurimath/mathml";
 
 await leptris.init();
 const parseMathml = createMathmlParser(leptris);

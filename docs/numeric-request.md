@@ -1,6 +1,6 @@
 # Numeric JSON requests
 
-The `plurimath.evaluate.numeric/1` profile accepts a closed numeric AST and exact decimal bindings. Ruby exposes `Plurimath::EvaluationRequest.call(json)` after `require "plurimath/evaluation_request"`; TypeScript exposes `evaluateRequest(json)` from `@plurimath/plurimath-ts`. Both return canonical JSON strings.
+The `plurimath.evaluate.numeric/1` profile accepts a closed numeric AST and exact decimal bindings. Ruby exposes `Plurimath::EvaluationRequest.call(json)` after `require "plurimath/evaluation_request"`; TypeScript exposes `evaluateRequest(json)` from `@plurimath/plurimath`. Both return canonical JSON strings.
 
 ```json
 {"schema":"plurimath.evaluate.numeric/1","ast":{"type":"binary","operator":"/","left":{"type":"variable","name":"x"},"right":{"type":"number","text":"3"}},"bindings":{"x":"0.30"}}

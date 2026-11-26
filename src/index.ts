@@ -1,5 +1,5 @@
 /**
- * `@plurimath/plurimath-ts` — the batteries-included entry.
+ * `@plurimath/plurimath` — the batteries-included entry.
  *
  * This entry intentionally pulls in everything; only the per-format subpaths
  * carry the slim-bundle guarantee (ARCHITECTURE.md §3). That is what lets the

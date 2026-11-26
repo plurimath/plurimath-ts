@@ -6,7 +6,7 @@
  *
  * Importing this module never loads, fetches or instantiates WASM. The caller
  * initializes explicitly with the distributable asset
- * (`@plurimath/plurimath-ts/evaluation/plurimath_numeric.wasm`) as bytes, a
+ * (`@plurimath/plurimath/evaluation/plurimath_numeric.wasm`) as bytes, a
  * `fetch` response or a URL. Nothing here touches `node:*`, the filesystem or
  * ambient configuration, so the same entry runs in browsers and in Node.
  *
@@ -28,7 +28,7 @@ import initGlue from "./quantity-wasm/numeric.js";
 /** The asset this release ships and pins (`assets/wasm/manifest.json`). */
 export const NUMERIC_WASM_ASSET = Object.freeze({
   file: "plurimath_numeric.wasm",
-  specifier: "@plurimath/plurimath-ts/evaluation/plurimath_numeric.wasm",
+  specifier: "@plurimath/plurimath/evaluation/plurimath_numeric.wasm",
   sha256: "2114cccd5e47b0c8884a0d03e993dd006ded9f0405f77585e6577b2273aaeb7c",
   bytes: 7502250,
   abi: 1,

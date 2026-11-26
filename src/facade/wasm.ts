@@ -12,7 +12,7 @@
  *
  * Importing this module never loads, fetches or instantiates WASM. The caller
  * initializes explicitly with the distributable asset
- * (`@plurimath/plurimath-ts/facade/plurimath_facade.wasm`) as bytes, a `fetch`
+ * (`@plurimath/plurimath/facade/plurimath_facade.wasm`) as bytes, a `fetch`
  * response or a URL. Nothing here touches `node:*`, the filesystem or ambient
  * configuration, so the same entry runs in browsers and in Node.
  *

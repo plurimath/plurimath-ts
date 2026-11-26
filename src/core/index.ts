@@ -1,5 +1,5 @@
 /**
- * `@plurimath/plurimath-ts/core` — the format-blind model layer.
+ * `@plurimath/plurimath/core` — the format-blind model layer.
  *
  * Nodes, errors and diagnostics live here; parse and render logic never does.
  * This surface is experimental through the `0.x` line and locks at `1.0`

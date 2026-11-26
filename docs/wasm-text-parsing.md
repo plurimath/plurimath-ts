@@ -9,7 +9,7 @@ Initialize explicitly with the exported WASM asset's bytes, a fetch response
 or a URL:
 
 ```ts
-import { initFacadeWasm } from "@plurimath/plurimath-ts/facade/wasm";
+import { initFacadeWasm } from "@plurimath/plurimath/facade/wasm";
 
 const kernel = await initFacadeWasm(wasmBytes);
 const ascii = kernel.parse("a/b", "asciimath");
@@ -19,7 +19,7 @@ console.log(ascii.toLatex(), latex.toAsciimath(), unicode.toUnicodemath());
 ```
 
 Node callers can read
-`@plurimath/plurimath-ts/facade/plurimath_facade.wasm` with their file API;
+`@plurimath/plurimath/facade/plurimath_facade.wasm` with their file API;
 browser callers can serve that asset and pass its URL. Importing the WASM
 entry does not initialize it. The root `parse` function and `Plurimath`
 constructor keep using the TypeScript path. The native `Formula` returned by

@@ -132,7 +132,7 @@ const asset = `/**
 export const FACADE_WASM_ASSET = Object.freeze({
   status: "pinned" as "pending" | "pinned",
   file: ${JSON.stringify(manifest.file)},
-  specifier: "@plurimath/plurimath-ts/facade/plurimath_facade.wasm",
+  specifier: "@plurimath/plurimath/facade/plurimath_facade.wasm",
   sha256: ${JSON.stringify(manifest.sha256)} as string | null,
   bytes: ${manifest.bytes} as number | null,
   abi: 1,

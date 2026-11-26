@@ -8,7 +8,7 @@
 export const FACADE_WASM_ASSET = Object.freeze({
   status: "pinned" as "pending" | "pinned",
   file: "plurimath_facade.wasm",
-  specifier: "@plurimath/plurimath-ts/facade/plurimath_facade.wasm",
+  specifier: "@plurimath/plurimath/facade/plurimath_facade.wasm",
   sha256: "f9c480c8aadb51dc4faef7b5a2562bb2b206b24099ca2ea456f256a8c488ff8c" as string | null,
   bytes: 19457727 as number | null,
   abi: 1,

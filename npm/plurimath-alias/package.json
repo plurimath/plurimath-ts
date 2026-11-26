@@ -1,6 +1,6 @@
 {
   "name": "plurimath",
-  "version": "0.0.0-ALIAS",
+  "version": "1.0.0",
   "description": "The unscoped alias for @plurimath/plurimath — the native TypeScript implementation of Plurimath. Parse and render AsciiMath, LaTeX, UnicodeMath, MathML, OMML and HTML.",
   "license": "MIT",
   "main": "index.cjs",
@@ -15,7 +15,7 @@
     "./package.json": "./package.json"
   },
   "dependencies": {
-    "@plurimath/plurimath": "0.0.0-ALIAS"
+    "@plurimath/plurimath": "1.0.0"
   },
   "repository": {
     "type": "git",

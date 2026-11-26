@@ -9,14 +9,14 @@ importers:
   .:
     dependencies:
       '@plurimath/amath-ts':
-        specifier: github:unitsml/amath-ts#b69d51ba8db5e8d7c423cf8bdc120a97047cdee6
-        version: https://codeload.github.com/unitsml/amath-ts/tar.gz/b69d51ba8db5e8d7c423cf8bdc120a97047cdee6
+        specifier: github:unitsml/amath-ts#0aa062457abb
+        version: https://codeload.github.com/unitsml/amath-ts/tar.gz/0aa062457abb39ef7890df3b578f38128123397e
       '@plurimath/latexmath-ts':
-        specifier: github:plurimath/latexmath-ts#69d877b43b5863bf39e9ba211a9116c125b7db12
-        version: https://codeload.github.com/plurimath/latexmath-ts/tar.gz/69d877b43b5863bf39e9ba211a9116c125b7db12
+        specifier: github:plurimath/latexmath-ts#7abfb5625d20
+        version: https://codeload.github.com/plurimath/latexmath-ts/tar.gz/7abfb5625d2017eb57eb56abe6079b682c2c4196
       '@plurimath/umath-ts':
-        specifier: github:plurimath/umath-ts#787840cc71a1e31ac6a2df6873b9dacad4b39241
-        version: https://codeload.github.com/plurimath/umath-ts/tar.gz/787840cc71a1e31ac6a2df6873b9dacad4b39241
+        specifier: github:plurimath/umath-ts#8bd3f4e22c8b
+        version: https://codeload.github.com/plurimath/umath-ts/tar.gz/8bd3f4e22c8b5eed40a8bad17b74f37a3f6b3190
       parsanol:
         specifier: git+https://github.com/suleman-uzair/parsanol-ts.git#af5d8cc8825f5e866dd2a52225fda7d945a1598d
         version: https://codeload.github.com/suleman-uzair/parsanol-ts/tar.gz/af5d8cc8825f5e866dd2a52225fda7d945a1598d
@@ -471,18 +471,18 @@ packages:
   '@oxc-project/types@0.142.0':
     resolution: {integrity: sha512-7W+2q5AKQVU36fkaryontrHn3YDt1RyUYXatw9i5H8ocYe2sPKSFB6eS8WNPeRKiN1qAWWZUPm7gwFzJGrccqQ==}
 
-  '@plurimath/amath-ts@https://codeload.github.com/unitsml/amath-ts/tar.gz/b69d51ba8db5e8d7c423cf8bdc120a97047cdee6':
-    resolution: {gitHosted: true, integrity: sha512-Ajt+dYyCZyXm5AZCn3qnGyKD2ltfgIlWNDjJtUjEghKOp9EBEinXvREltFLwSwMTU6hRhDIdPpIvdldN6FTjvQ==, tarball: https://codeload.github.com/unitsml/amath-ts/tar.gz/b69d51ba8db5e8d7c423cf8bdc120a97047cdee6}
+  '@plurimath/amath-ts@https://codeload.github.com/unitsml/amath-ts/tar.gz/0aa062457abb39ef7890df3b578f38128123397e':
+    resolution: {gitHosted: true, integrity: sha512-oSyVB1WI0S9G5Dob1sy9kq1VrO7rnz25+mVY4G4xTkfJW5dPgm1cYgZyxkXb8ypYtPnTZsZNtK5EG9BSjM3JvA==, tarball: https://codeload.github.com/unitsml/amath-ts/tar.gz/0aa062457abb39ef7890df3b578f38128123397e}
     version: 0.1.0-alpha.0
     engines: {node: '>=22'}
 
-  '@plurimath/latexmath-ts@https://codeload.github.com/plurimath/latexmath-ts/tar.gz/69d877b43b5863bf39e9ba211a9116c125b7db12':
-    resolution: {gitHosted: true, integrity: sha512-OqEExiDSoUojVhS94nzJGF7tmKh5Wpg+bjZHCxHzgaxc4ZNuHm8lh/gn/B8yt1jvkBKsRmpnptJrrX3Lqo9TOg==, tarball: https://codeload.github.com/plurimath/latexmath-ts/tar.gz/69d877b43b5863bf39e9ba211a9116c125b7db12}
+  '@plurimath/latexmath-ts@https://codeload.github.com/plurimath/latexmath-ts/tar.gz/7abfb5625d2017eb57eb56abe6079b682c2c4196':
+    resolution: {gitHosted: true, integrity: sha512-xSnV7S3X6PdELj//HSvXpFQTB3NOanegfFFAzebNdfEvhMCtWgsdOCaKca/lnysV5vI12hj4mmbjAC0Qry0dWg==, tarball: https://codeload.github.com/plurimath/latexmath-ts/tar.gz/7abfb5625d2017eb57eb56abe6079b682c2c4196}
     version: 0.1.0-alpha.0
     engines: {node: '>=22'}
 
-  '@plurimath/umath-ts@https://codeload.github.com/plurimath/umath-ts/tar.gz/787840cc71a1e31ac6a2df6873b9dacad4b39241':
-    resolution: {gitHosted: true, integrity: sha512-JsbLrhwLA6Q5ho/5TYkRkO6Olg3jex9z6Y31na9jk6mcO3hMdJIs+nfAsQwmzkJER1kEw1Ie4SpAW9iQT4xwfA==, tarball: https://codeload.github.com/plurimath/umath-ts/tar.gz/787840cc71a1e31ac6a2df6873b9dacad4b39241}
+  '@plurimath/umath-ts@https://codeload.github.com/plurimath/umath-ts/tar.gz/8bd3f4e22c8b5eed40a8bad17b74f37a3f6b3190':
+    resolution: {gitHosted: true, integrity: sha512-qvWMdtINhMj22a5JK6EBj8HZo8Guku9cz3cWNv7+Mgo2KqRH+zzxvsvLBuEQ9NryFZOcts/4L05fgsD11AHubg==, tarball: https://codeload.github.com/plurimath/umath-ts/tar.gz/8bd3f4e22c8b5eed40a8bad17b74f37a3f6b3190}
     version: 0.1.0-alpha.0
     engines: {node: '>=22'}
 
@@ -1348,16 +1348,8 @@ packages:
   package-manager-detector@1.8.0:
     resolution: {integrity: sha512-yQA4H19AmPEoMUeavPMDIe1higySl/gH/yaQrkT/s07Qp+7pp2hYz30N3z2l5BkjVkF9Ow6o0wjJamm2y7Sn0A==}
 
-  parsanol@1.5.7:
-    resolution: {integrity: sha512-4wojKeX8zzpMpIbssawm5rOgUfvsh5yPRO6NnV5IS5mg8V9Z+8/5S6KyWKCmeAV2dKU/9Y34r4b13Q9cMEcERQ==}
-    engines: {node: '>=22'}
-
-  parsanol@1.5.8:
-    resolution: {integrity: sha512-/SWw9oTIZC3UUjpPfTSi+ggbELG6z1wSc++Gxqt301rENbCHlIpdHBpxbBqKsfmb31m5hbMb9wpn33RNtveZOg==}
-    engines: {node: '>=22'}
-
   parsanol@https://codeload.github.com/suleman-uzair/parsanol-ts/tar.gz/af5d8cc8825f5e866dd2a52225fda7d945a1598d:
-    resolution: {gitHosted: true, integrity: sha512-L3OnyKa+c/GI4MOTxX/h6oS3seda/AwZUKlU7QgBlWRNC4emWTVM7rPZJnoVMrfaYAiqDeOev5JRPXmpQhnVAQ==, tarball: https://codeload.github.com/suleman-uzair/parsanol-ts/tar.gz/af5d8cc8825f5e866dd2a52225fda7d945a1598d}
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/suleman-uzair/parsanol-ts/tar.gz/af5d8cc8825f5e866dd2a52225fda7d945a1598d}
     version: 1.5.16
     engines: {node: '>=22'}
 
@@ -1994,17 +1986,17 @@ snapshots:
 
   '@oxc-project/types@0.142.0': {}
 
-  '@plurimath/amath-ts@https://codeload.github.com/unitsml/amath-ts/tar.gz/b69d51ba8db5e8d7c423cf8bdc120a97047cdee6':
+  '@plurimath/amath-ts@https://codeload.github.com/unitsml/amath-ts/tar.gz/0aa062457abb39ef7890df3b578f38128123397e':
     dependencies:
-      parsanol: 1.5.7
+      parsanol: https://codeload.github.com/suleman-uzair/parsanol-ts/tar.gz/af5d8cc8825f5e866dd2a52225fda7d945a1598d
 
-  '@plurimath/latexmath-ts@https://codeload.github.com/plurimath/latexmath-ts/tar.gz/69d877b43b5863bf39e9ba211a9116c125b7db12':
+  '@plurimath/latexmath-ts@https://codeload.github.com/plurimath/latexmath-ts/tar.gz/7abfb5625d2017eb57eb56abe6079b682c2c4196':
     dependencies:
-      parsanol: 1.5.7
+      parsanol: https://codeload.github.com/suleman-uzair/parsanol-ts/tar.gz/af5d8cc8825f5e866dd2a52225fda7d945a1598d
 
-  '@plurimath/umath-ts@https://codeload.github.com/plurimath/umath-ts/tar.gz/787840cc71a1e31ac6a2df6873b9dacad4b39241':
+  '@plurimath/umath-ts@https://codeload.github.com/plurimath/umath-ts/tar.gz/8bd3f4e22c8b5eed40a8bad17b74f37a3f6b3190':
     dependencies:
-      parsanol: 1.5.8
+      parsanol: https://codeload.github.com/suleman-uzair/parsanol-ts/tar.gz/af5d8cc8825f5e866dd2a52225fda7d945a1598d
 
   '@publint/pack@0.1.6':
     dependencies:
@@ -2626,10 +2618,6 @@ snapshots:
   obug@2.1.4: {}
 
   package-manager-detector@1.8.0: {}
-
-  parsanol@1.5.7: {}
-
-  parsanol@1.5.8: {}
 
   parsanol@https://codeload.github.com/suleman-uzair/parsanol-ts/tar.gz/af5d8cc8825f5e866dd2a52225fda7d945a1598d: {}
 

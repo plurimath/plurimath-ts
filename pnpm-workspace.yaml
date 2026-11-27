@@ -1,6 +1,5 @@
 # Git-hosted stage packages build their dist with `prepare` on install.
 onlyBuiltDependencies:
-  - "@plurimath/amath-ts@https://codeload.github.com/unitsml/amath-ts/tar.gz/0aa062457abb39ef7890df3b578f38128123397e"
-  - "@plurimath/latexmath-ts@https://codeload.github.com/plurimath/latexmath-ts/tar.gz/7abfb5625d2017eb57eb56abe6079b682c2c4196"
-  - "@plurimath/umath-ts@https://codeload.github.com/plurimath/umath-ts/tar.gz/8bd3f4e22c8b5eed40a8bad17b74f37a3f6b3190"
-  - "parsanol@https://codeload.github.com/suleman-uzair/parsanol-ts/tar.gz/af5d8cc8825f5e866dd2a52225fda7d945a1598d"
+  - "@plurimath/amath-ts@https://codeload.github.com/unitsml/amath-ts/tar.gz/b9d88d9e7dd858e93c5e1325333e411adeb98283"
+  - "@plurimath/latexmath-ts@https://codeload.github.com/plurimath/latexmath-ts/tar.gz/d65a7d83b5490dd44c479872f9e2cda54c5e692d"
+  - "@plurimath/umath-ts@https://codeload.github.com/plurimath/umath-ts/tar.gz/062c5d62a092d37d8e2cf7ce7f925a78aa447553"

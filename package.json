@@ -223,9 +223,9 @@
     "vitest": "^4.1.11"
   },
   "dependencies": {
-    "@plurimath/amath-ts": "github:unitsml/amath-ts#0aa062457abb",
-    "parsanol": "git+https://github.com/suleman-uzair/parsanol-ts.git#af5d8cc8825f5e866dd2a52225fda7d945a1598d",
-    "@plurimath/latexmath-ts": "github:plurimath/latexmath-ts#7abfb5625d20",
-    "@plurimath/umath-ts": "github:plurimath/umath-ts#8bd3f4e22c8b"
+    "@plurimath/amath-ts": "github:unitsml/amath-ts#b9d88d9e7dd",
+    "parsanol": "^1.5.25",
+    "@plurimath/latexmath-ts": "github:plurimath/latexmath-ts#d65a7d83b54",
+    "@plurimath/umath-ts": "github:plurimath/umath-ts#062c5d62a09"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@plurimath/plurimath",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Native TypeScript implementation of Plurimath",
   "license": "BSD-2-Clause",
   "author": "Ribose Inc.",
